@@ -1,0 +1,23 @@
+server:
+  host: "0.0.0.0"
+  port: 8085
+
+database:
+  driver: "sqlite3"
+  dsn: "./sensor.db"
+
+influxdb:
+  url: "http://localhost:8181"
+  token: "apiv3_wbTBA3_eeagXcKFlTV3Z9nP1IyGaZRJv4DCWoQ3ftuzfvBBPYz7duqeqWXj5fWdwJpe29ihZA3qIqZA07Xnocg"
+  org: "my-org"
+  bucket: "sensor_data"
+
+mqtt:
+  broker: "mqtt://localhost:1883"
+  client_id: "sensor-service"
+  username: ""
+  password: ""
+  topic: "sensors/+/data"
+  qos: 1
+
+nats_url: "http://localhost:4222"

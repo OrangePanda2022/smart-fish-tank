@@ -1,0 +1,109 @@
+{
+  "info": {
+    "name": "Sensor Service API",
+    "description": "IoT智能鱼缸 Sensor 微服务 API 测试集",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "tankId",
+      "value": "tank_1",
+      "type": "string"
+    },
+    {
+      "key": "deviceId",
+      "value": "device_123",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "健康检查",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "鱼缸传感器数据",
+      "item": [
+        {
+          "name": "获取鱼缸最新传感器数据",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tanks/{{tankId}}/sensors/latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tanks", "{{tankId}}", "sensors", "latest"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "获取鱼缸历史传感器数据",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/tanks/{{tankId}}/sensors/history?start=2026-03-01T00:00:00Z&end=2026-03-13T23:59:59Z&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tanks", "{{tankId}}", "sensors", "history"],
+              "query": [
+                {
+                  "key": "start",
+                  "value": "2026-03-01T00:00:00Z"
+                },
+                {
+                  "key": "end",
+                  "value": "2026-03-13T23:59:59Z"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "设备传感器数据",
+      "item": [
+        {
+          "name": "获取设备传感器数据",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/devices/{{deviceId}}/sensors?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "devices", "{{deviceId}}", "sensors"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

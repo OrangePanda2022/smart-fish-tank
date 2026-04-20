@@ -1,0 +1,7 @@
+routes:
+  /ping: healthz-service
+  /api/v1/users: user-service
+  /api/v1/auth: user-service
+  /api/v1/tanks: sensor-service
+  /api/v1/tank: tank-service
+  /api/v1/devices: sensor-service

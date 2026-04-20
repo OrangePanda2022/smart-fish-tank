@@ -1,0 +1,10 @@
+upstreams:
+  user-service:
+    - host: "127.0.0.1"
+      port: 8081	
+  sensor-service:
+    - host: "127.0.0.1"
+      port: 8085
+  tank-service:
+    - host: "127.0.0.1"
+      port: 8084
