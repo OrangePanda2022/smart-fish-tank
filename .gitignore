@@ -35,3 +35,28 @@ _testmain.go
 *.local.yml
 dumped_hertz_remote_config.json
 .env
+
+# --- 构建产物 / 二进制 ---
+# Go: 编译输出目录
+**/bin/
+# Go: 编译进模块根目录的 server 二进制
+/Backend/auth/server
+/Backend/gateway/server
+/Backend/mind/server
+/Backend/sensor/server
+/Backend/tank/server
+
+# --- 数据库 ---
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Claude Code 本地设置 ---
+.claude/

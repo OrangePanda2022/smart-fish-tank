@@ -1,0 +1,28 @@
+services:
+  influxdb3:
+    image: quay.io/influxdb/influxdb3-core:latest
+    container_name: aqua-influxdb3
+    ports:
+      - "8181:8181"
+    volumes:
+      - influxdb3-data:/var/lib/influxdb3
+    command: serve --node-id=1 --object-store=file --data-dir=/var/lib/influxdb3 --without-auth
+    restart: unless-stopped
+
+  nanomq:
+    image: emqx/nanomq:latest
+    container_name: aqua-nanomq
+    ports:
+      - "1883:1883"
+    restart: unless-stopped
+
+  nats:
+    image: nats:latest
+    container_name: aqua-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    restart: unless-stopped
+
+volumes:
+  influxdb3-data:
