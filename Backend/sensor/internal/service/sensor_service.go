@@ -8,29 +8,67 @@ import (
 
 	"sensor/internal/domain"
 	"sensor/internal/repo"
+
+	"github.com/nats-io/nats.go"
 )
 
 var (
 	ErrInvalidDevice = errors.New("无效的设备")
 	ErrInvalidData   = errors.New("无效的传感器数据")
 	ErrNotFound      = errors.New("未找到数据")
+	ErrValidation    = errors.New("传感器数据验证失败")
 )
 
 // SensorService 表示传感器服务
 type SensorService struct {
 	sensorRepo *repo.SensorRepo // 传感器数据仓储
+	natsConn   *nats.Conn       // NATS 连接（可为 nil）
 	// deviceRepo *repo.DeviceRepo // 设备仓储
 }
 
 // NewSensorService 创建传感器服务
 func NewSensorService(
 	sensorRepo *repo.SensorRepo,
+	natsConn *nats.Conn,
 	// deviceRepo *repo.DeviceRepo,
 ) *SensorService {
 	return &SensorService{
 		sensorRepo: sensorRepo,
+		natsConn:   natsConn,
 		// deviceRepo: deviceRepo,
 	}
+}
+
+// ProcessSensorData 处理 HTTP 手动录入的传感器数据（启用验证）
+func (s *SensorService) ProcessSensorData(data *domain.SensorData) error {
+	// HTTP 来源数据必须验证
+	if err := data.Validate(); err != nil {
+		return ErrValidation
+	}
+
+	// 如果时间戳为零，使用当前时间
+	if data.Timestamp.IsZero() {
+		data.Timestamp = time.Now()
+	}
+
+	// 写入数据库
+	if err := s.sensorRepo.Write(data); err != nil {
+		log.Printf("写入传感器数据失败: %v", err)
+		return err
+	}
+
+	// 发布 sensor.update 事件，通知 mind 服务更新预测状态缓存
+	if s.natsConn != nil {
+		eventBytes, err := json.Marshal(data)
+		if err != nil {
+			log.Printf("序列化 sensor.update 事件失败: %v", err)
+		} else if err := s.natsConn.Publish("sensor.update", eventBytes); err != nil {
+			log.Printf("发布 sensor.update 事件失败: %v", err)
+		}
+	}
+
+	log.Printf("成功处理设备 %s 的手动录入传感器数据", data.DeviceID)
+	return nil
 }
 
 // ProcessMQTTMessage 处理接收到的MQTT消息
@@ -54,10 +92,10 @@ func (s *SensorService) ProcessMQTTMessage(payload []byte) error {
 	// }
 
 	// 验证传感器数据
-	// if err := data.Validate(); err != nil {
-	// 	log.Printf("无效的传感器数据: %v", err)
-	// 	return ErrInvalidData
-	// }
+	if err := data.Validate(); err != nil {
+		log.Printf("无效的传感器数据: %v", err)
+		return ErrInvalidData
+	}
 
 	// 如果时间戳为零，使用当前时间
 	if data.Timestamp.IsZero() {
@@ -68,6 +106,16 @@ func (s *SensorService) ProcessMQTTMessage(payload []byte) error {
 	if err := s.sensorRepo.Write(&data); err != nil {
 		log.Printf("写入传感器数据失败: %v", err)
 		return err
+	}
+
+	// 发布 sensor.update 事件，通知 mind 服务更新预测状态缓存
+	if s.natsConn != nil {
+		eventBytes, err := json.Marshal(data)
+		if err != nil {
+			log.Printf("序列化 sensor.update 事件失败: %v", err)
+		} else if err := s.natsConn.Publish("sensor.update", eventBytes); err != nil {
+			log.Printf("发布 sensor.update 事件失败: %v", err)
+		}
 	}
 
 	log.Printf("成功处理设备 %s 的传感器数据", data.DeviceID)

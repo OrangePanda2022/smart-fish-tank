@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"sensor/internal/model"
 	"sensor/internal/service"
@@ -39,16 +40,7 @@ func (h *SensorHandler) GetLatestByTank(c *gin.Context) {
 	}
 
 	// 转换为DTO
-	dto := model.ToDTO(
-		data.DeviceID,
-		data.TankID,
-		data.Temperature,
-		data.PH,
-		data.Oxygen,
-		data.Ammonia,
-		data.WaterLevel,
-		data.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
-	)
+	dto := model.ToDTO(data)
 
 	c.JSON(http.StatusOK, dto)
 }
@@ -82,17 +74,8 @@ func (h *SensorHandler) GetHistoryByTank(c *gin.Context) {
 
 	// 转换为DTO列表
 	dtos := make([]model.SensorDataDTO, len(data))
-	for i, d := range data {
-		dtos[i] = model.ToDTO(
-			d.DeviceID,
-			d.TankID,
-			d.Temperature,
-			d.PH,
-			d.Oxygen,
-			d.Ammonia,
-			d.WaterLevel,
-			d.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
-		)
+	for i := range data {
+		dtos[i] = model.ToDTO(&data[i])
 	}
 
 	result := model.SensorDataListDTO{
@@ -130,17 +113,8 @@ func (h *SensorHandler) GetByDevice(c *gin.Context) {
 
 	// 转换为DTO列表
 	dtos := make([]model.SensorDataDTO, len(data))
-	for i, d := range data {
-		dtos[i] = model.ToDTO(
-			d.DeviceID,
-			d.TankID,
-			d.Temperature,
-			d.PH,
-			d.Oxygen,
-			d.Ammonia,
-			d.WaterLevel,
-			d.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
-		)
+	for i := range data {
+		dtos[i] = model.ToDTO(&data[i])
 	}
 
 	result := model.SensorDataListDTO{
@@ -156,5 +130,47 @@ func (h *SensorHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
 		"service": "sensor-service",
+	})
+}
+
+// CreateSensorData 处理 POST /api/v1/tanks/:tankId/sensors
+func (h *SensorHandler) CreateSensorData(c *gin.Context) {
+	tankID := c.Param("tankId")
+	if tankID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tankId不能为空"})
+		return
+	}
+
+	var req model.SensorDataDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求体格式错误: " + err.Error()})
+		return
+	}
+
+	// DTO(camelCase) → domain(snake_case)
+	data := model.ToDomain(&req)
+
+	// 路径参数 tankId 覆盖请求体中的值，保证一致性
+	data.TankID = tankID
+
+	// 若未提供时间戳，使用当前时间
+	if data.Timestamp.IsZero() {
+		data.Timestamp = time.Now()
+	}
+
+	if err := h.service.ProcessSensorData(&data); err != nil {
+		if err == service.ErrValidation {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "传感器数据超出有效范围"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	dto := model.ToDTO(&data)
+	c.JSON(http.StatusCreated, gin.H{
+		"code":    http.StatusCreated,
+		"message": "success",
+		"data":    dto,
 	})
 }

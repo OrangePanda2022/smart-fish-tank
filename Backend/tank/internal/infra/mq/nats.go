@@ -35,25 +35,23 @@ func (c *NATSConsumer) Start(ctx context.Context) error {
 			return
 		}
 
-		var resp interface{}
-
 		// subject 已路由到 tank 服务，无需 type 字段；tank 查询要求 limit == 1
 		if req.Limit != 1 {
-			resp = map[string]string{"error": "bad request"}
-		} else {
-			tankData, err := c.tankRepo.GetTankByTankID(
-				ctx,
-				req.TankID,
-			)
-			if err != nil {
-				resp = map[string]string{"error": err.Error()}
-			} else {
-				resp = tankData
-			}
+			msg.Respond([]byte(`{"error":"bad request"}`))
+			return
 		}
 
-		// 返回响应
-		data, err := json.Marshal(resp)
+		tankData, err := c.tankRepo.GetTankByTankID(
+			ctx,
+			req.TankID,
+		)
+		if err != nil {
+			data, _ := json.Marshal(map[string]string{"error": err.Error()})
+			msg.Respond(data)
+			return
+		}
+
+		data, err := json.Marshal(tankData)
 		if err != nil {
 			msg.Respond([]byte(`{"error":"marshal error"}`))
 			return

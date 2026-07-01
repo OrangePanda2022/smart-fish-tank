@@ -83,6 +83,10 @@ func (i *InfluxDB) WriteSensorData(data *domain.SensorData) error {
 			"oxygen":      data.Oxygen,
 			"ammonia":     data.Ammonia,
 			"water_level": data.WaterLevel,
+			"tds":         data.TDS,
+			"nitrate":     data.Nitrate,
+			"nitrite":     data.Nitrite,
+			"chloride":    data.Chloride,
 		},
 		data.Timestamp,
 	)
@@ -152,6 +156,10 @@ func (i *InfluxDB) QueryLatestByTank(tankID string) (*domain.SensorData, error) 
 		Oxygen:      toFloat64(row["oxygen"]),
 		Ammonia:     toFloat64(row["ammonia"]),
 		WaterLevel:  toFloat64(row["water_level"]),
+		TDS:         toFloat64(row["tds"]),
+		Nitrate:     toFloat64(row["nitrate"]),
+		Nitrite:     toFloat64(row["nitrite"]),
+		Chloride:    toFloat64(row["chloride"]),
 		Timestamp:   timestamp,
 	}, nil
 }
@@ -181,10 +189,10 @@ func (i *InfluxDB) QueryHistoryByTank(tankID string, start, end time.Time, limit
 	// 内存缓存中没有，从InfluxDB查询
 	timeRange := ""
 	if !start.IsZero() {
-		timeRange += fmt.Sprintf(" AND time >= timestamp '%s'", start.Format(time.RFC3339))
+		timeRange += fmt.Sprintf(" AND time >= '%s'", start.Format(time.RFC3339))
 	}
 	if !end.IsZero() {
-		timeRange += fmt.Sprintf(" AND time <= timestamp '%s'", end.Format(time.RFC3339))
+		timeRange += fmt.Sprintf(" AND time <= '%s'", end.Format(time.RFC3339))
 	}
 
 	limitStr := ""
@@ -224,6 +232,10 @@ func (i *InfluxDB) QueryHistoryByTank(tankID string, start, end time.Time, limit
 			Oxygen:      toFloat64(row["oxygen"]),
 			Ammonia:     toFloat64(row["ammonia"]),
 			WaterLevel:  toFloat64(row["water_level"]),
+			TDS:         toFloat64(row["tds"]),
+			Nitrate:     toFloat64(row["nitrate"]),
+			Nitrite:     toFloat64(row["nitrite"]),
+			Chloride:    toFloat64(row["chloride"]),
 			Timestamp:   timestamp,
 		})
 	}
@@ -306,12 +318,16 @@ func (i *InfluxDB) QueryByDevice(deviceID string, limit int) ([]domain.SensorDat
 
 		result = append(result, domain.SensorData{
 			DeviceID:    deviceID,
-			TankID:      toString(row["tank"]),
+			TankID:      toString(row["tank_id"]),
 			Temperature: toFloat64(row["temperature"]),
 			PH:          toFloat64(row["ph"]),
 			Oxygen:      toFloat64(row["oxygen"]),
 			Ammonia:     toFloat64(row["ammonia"]),
 			WaterLevel:  toFloat64(row["water_level"]),
+			TDS:         toFloat64(row["tds"]),
+			Nitrate:     toFloat64(row["nitrate"]),
+			Nitrite:     toFloat64(row["nitrite"]),
+			Chloride:    toFloat64(row["chloride"]),
 			Timestamp:   timestamp,
 		})
 	}

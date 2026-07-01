@@ -26,6 +26,14 @@ func NewNATSConsumer(URL string, sensorRepo *repo.SensorRepo) (*NATSConsumer, er
 	}, nil
 }
 
+// NewNATSConsumerWithConn 使用已有的 NATS 连接创建消费者
+func NewNATSConsumerWithConn(nc *nats.Conn, sensorRepo *repo.SensorRepo) *NATSConsumer {
+	return &NATSConsumer{
+		NATSClient: nc,
+		sensorRepo: sensorRepo,
+	}
+}
+
 func (c *NATSConsumer) Start(ctx context.Context) error {
 	_, err := c.NATSClient.QueueSubscribe("sensor.get", "sensor-group", func(msg *nats.Msg) {
 		var req domain.Request
@@ -36,9 +44,6 @@ func (c *NATSConsumer) Start(ctx context.Context) error {
 			return
 		}
 
-		var resp interface{}
-
-		// subject 已路由到 sensor 服务，无需 type 字段
 		sensorData, err := c.sensorRepo.QueryHistoryByTank(
 			req.TankID,
 			time.Now().Add(-48*time.Hour).Format(time.RFC3339),
@@ -46,13 +51,12 @@ func (c *NATSConsumer) Start(ctx context.Context) error {
 			req.Limit,
 		)
 		if err != nil {
-			resp = map[string]string{"error": err.Error()}
-		} else {
-			resp = sensorData
+			data, _ := json.Marshal(map[string]string{"error": err.Error()})
+			msg.Respond(data)
+			return
 		}
 
-		// 返回响应
-		data, err := json.Marshal(resp)
+		data, err := json.Marshal(sensorData)
 		if err != nil {
 			msg.Respond([]byte(`{"error":"marshal error"}`))
 			return

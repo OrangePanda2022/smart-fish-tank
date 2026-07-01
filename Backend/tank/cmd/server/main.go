@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 	"tank/internal/config"
 	"tank/internal/controller"
 	"tank/internal/infra/db"
@@ -17,39 +18,49 @@ import (
 )
 
 func main() {
+	// 加载配置
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
-		log.Fatalf("加载配置失败: %v", err)
+		log.Fatalf("Failed to load config: %s\n", err)
 	}
 
-	database, _ := db.NewSQLite(cfg.Database.DSN)
-	tankRepo := repo.NewTankRepo(database)
-	tankSvc := service.NewTankService(tankRepo)
+	// 数据库
+	db, _ := db.NewSQLite(cfg.Database.DSN)
+	tankRepo := repo.NewTankRepo(db)
 
-	// 直播流帧缓冲区：ESP32-CAM 推帧 -> 环形缓冲 -> 浏览器 MJPEG 拉流
+	// 帧缓冲区
 	frameBuffer := stream.NewFrameBuffer(cfg.Stream.MaxRingSize, cfg.Stream.ViewerBufSize)
 
-	// NATS 消费者；连接失败时 natsConn 留 nil，stream_handler 会跳过帧元数据发布
-	var natsConn *nats.Conn
-	natsConsumer, err := mq.NewNATSConsumer(cfg.NATSURL, tankRepo)
+	// 服务层
+	tankSvc := service.NewTankService(tankRepo)
+
+	// NATS连接（帧推送和消费共用）
+	var natsConn *mq.NATSConsumer
+	var nc *nats.Conn // 用于帧元数据发布的原生连接
+	natsConn, err = mq.NewNATSConsumer(cfg.NATSURL, tankRepo)
 	if err != nil {
 		log.Printf("Failed to create NATS consumer: %s\n", err)
 	} else {
-		natsConn = natsConsumer.NATSClient
+		nc = natsConn.NATSClient
 		go func() {
-			if err := natsConsumer.Start(context.Background()); err != nil {
+			if err := natsConn.Start(context.Background()); err != nil {
 				log.Printf("NATS consumer error: %s\n", err)
 			}
 		}()
 	}
 
-	handler := controller.NewHandler(tankSvc, frameBuffer, natsConn)
+	// Handler和路由
+	handler := controller.NewHandler(tankSvc, frameBuffer, nc)
 	router := controller.NewRouter(handler)
 
+	// HTTP服务器（WriteTimeout=0，支持MJPEG长连接）
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:         addr,
+		Handler:      router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 0, // 必须为0，否则MJPEG流会被超时杀死
+		IdleTimeout:  120 * time.Second,
 	}
 
 	// 启动服务器

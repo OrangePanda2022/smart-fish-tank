@@ -20,4 +20,4 @@ mqtt:
   topic: "sensors/+/data"
   qos: 1
 
-nats_url: "http://localhost:4222"
+nats_url: "nats://localhost:4222"

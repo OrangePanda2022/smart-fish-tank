@@ -294,6 +294,76 @@ console.log(data);
 
 ---
 
+### 6. 推送直播帧
+
+**端点**: `POST /api/v1/tank/:tank_id/stream/frame`
+
+**认证**: 暂无（MVP阶段，TODO: X-Device-Key 设备认证）
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| tank_id | string | 是 | 鱼缸 ID |
+
+**请求体**: raw JPEG 二进制数据（`Content-Type: image/jpeg`）
+
+**ESP32-CAM 示例** (Arduino):
+```cpp
+camera_fb_t* fb = esp_camera_fb_get();
+HTTPClient http;
+http.begin("http://<host>:8084/api/v1/tank/<tank_id>/stream/frame");
+http.addHeader("Content-Type", "image/jpeg");
+http.POST(fb->buf, fb->len);
+http.end();
+esp_camera_fb_return(fb);
+delay(1000); // 1 FPS
+```
+
+**成功响应** (200):
+```json
+{
+  "msg": "ok"
+}
+```
+
+**错误响应** (400):
+```json
+{
+  "msg": "error",
+  "error": "not a JPEG"
+}
+```
+
+---
+
+### 7. 获取直播流
+
+**端点**: `GET /api/v1/tank/:tank_id/stream`
+
+**认证**: 是
+
+**路径参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| tank_id | string | 是 | 鱼缸 ID |
+
+**响应格式**: `multipart/x-mixed-replace`（MJPEG 流）
+
+**浏览器使用**:
+```html
+<img src="http://<host>:8084/api/v1/tank/<tank_id>/stream" />
+```
+
+无需任何 JavaScript，`<img>` 标签即可直接显示实时画面。
+
+**说明**:
+- 长连接，浏览器关闭标签或导航离开后服务端自动清理资源
+- 1-3秒帧间隔下延迟约100-500ms
+- 每个 tank 支持同时1-3个观看者
+- 当前 `getUserID()` 为硬编码，所有权验证需等 auth middleware 接入
+
+---
+
 ## 通用响应格式
 
 ### 成功响应
@@ -362,3 +432,5 @@ console.log(data);
 2. **路由方法问题**: 创建鱼缸使用 `PATCH` 方法，建议改为 `POST` 以符合 RESTful 规范。
 
 3. **错误处理**: 当前实现使用 `fmt.Println` 输出错误而非结构化日志，且部分错误未返回合适的 HTTP 状态码。
+
+4. **直播流网关**: MJPEG 流是长连接，不应经过 gateway 代理（会被超时杀死），浏览器应直连 tank 服务 8084 端口。

@@ -15,6 +15,7 @@ func (h *SensorHandler) RegisterRoutes(router *gin.Engine) {
 		{
 			tanks.GET("/sensors/latest", h.GetLatestByTank)
 			tanks.GET("/sensors/history", h.GetHistoryByTank)
+			tanks.POST("/sensors", h.CreateSensorData)
 		}
 
 		// 设备传感器路由

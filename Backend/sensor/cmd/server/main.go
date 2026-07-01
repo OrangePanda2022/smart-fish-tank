@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	natsgo "github.com/nats-io/nats.go"
 
 	"sensor/internal/config"
 	"sensor/internal/database"
@@ -48,6 +49,17 @@ func main() {
 		defer influxDB.Close()
 	}
 
+	// 初始化NATS连接
+	var natsConn *natsgo.Conn
+	nc, natsErr := natsgo.Connect(cfg.NATSURL)
+	if natsErr != nil {
+		log.Printf("连接NATS失败: %v", natsErr)
+	} else {
+		natsConn = nc
+		log.Printf("已连接NATS: %s", cfg.NATSURL)
+		defer natsConn.Drain()
+	}
+
 	// 初始化仓储
 	// deviceRepo := repo.NewDeviceRepo(sqliteDB.GetDB())
 	sensorRepo := repo.NewSensorRepo(influxDB)
@@ -55,6 +67,7 @@ func main() {
 	// 初始化服务
 	sensorService := service.NewSensorService(
 		sensorRepo,
+		natsConn,
 		// deviceRepo,
 	)
 
@@ -67,17 +80,29 @@ func main() {
 	}
 
 	// 初始化NATS消费者
-	natsConsumer, err := nats.NewNATSConsumer(cfg.NATSURL, sensorRepo)
-	if err != nil {
-		log.Printf("初始化NATS消费者失败: %v", err)
-	} else {
-		defer natsConsumer.Stop()
-		// Start 内部 QueueSubscribe 后会阻塞在 <-ctx.Done()，须放 goroutine，否则 HTTP 服务器无法启动
+	var natsConsumer *nats.NATSConsumer
+	if natsConn != nil {
+		natsConsumer = nats.NewNATSConsumerWithConn(natsConn, sensorRepo)
 		go func() {
 			if err := natsConsumer.Start(context.Background()); err != nil {
-				log.Printf("启动NATS消费者失败: %v", err)
+				log.Printf("NATS消费者异常退出: %v", err)
 			}
 		}()
+		defer natsConsumer.Stop()
+	} else {
+		// NATS不可用时尝试独立连接
+		var natsErr error
+		natsConsumer, natsErr = nats.NewNATSConsumer(cfg.NATSURL, sensorRepo)
+		if natsErr != nil {
+			log.Printf("初始化NATS消费者失败: %v", natsErr)
+		} else {
+			go func() {
+				if err := natsConsumer.Start(context.Background()); err != nil {
+					log.Printf("NATS消费者异常退出: %v", err)
+				}
+			}()
+			defer natsConsumer.Stop()
+		}
 	}
 
 	// 初始化处理器

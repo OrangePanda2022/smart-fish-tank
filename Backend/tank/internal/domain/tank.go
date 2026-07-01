@@ -15,12 +15,12 @@ const (
 type FishStatus string
 
 type Tank struct {
-	TankID     string     `gorm:"primaryKey;not null"`
-	UserID     string     `gorm:"not null;index"`
-	TankName   string     `gorm:"type:varchar(100);not null"`
-	TankSize   int        `gorm:"column:tank_size;not null"`
-	FishCount  int        `gorm:"default:0"`
-	FishStatus FishStatus `gorm:"type:varchar(20);default:'good'"`
+	TankID     string     `json:"tank_id"     gorm:"primaryKey;not null"`
+	UserID     string     `json:"user_id"     gorm:"not null;index"`
+	TankName   string     `json:"tank_name"   gorm:"type:varchar(100);not null"`
+	TankSize   int        `json:"tank_size"   gorm:"column:tank_size;not null"`
+	FishCount  int        `json:"fish_count"  gorm:"default:0"`
+	FishStatus FishStatus `json:"fish_status" gorm:"type:varchar(20);default:'good'"`
 	gorm.Model
 }
 

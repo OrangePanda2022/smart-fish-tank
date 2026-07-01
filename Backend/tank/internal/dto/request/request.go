@@ -13,5 +13,4 @@ type UpdateTankRequest struct {
 type GetTankRequest struct {
 	TankID string `json:"tank_id"`
 	Limit  int    `json:"limit"`
-	Type   string `json:"type"`
 }
