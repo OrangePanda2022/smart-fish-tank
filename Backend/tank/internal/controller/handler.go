@@ -4,16 +4,24 @@ import (
 	"fmt"
 	"tank/internal/dto/request"
 	"tank/internal/service"
+	"tank/internal/stream"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 )
 
 type Handler struct {
-	tankSvc *service.TankService
+	tankSvc     *service.TankService
+	frameBuffer *stream.FrameBuffer // 鱼缸直播流帧环形缓冲区
+	natsConn    *nats.Conn          // 可选：发布帧元数据事件，nil 时跳过
 }
 
-func NewHandler(tankSvc *service.TankService) *Handler {
-	return &Handler{tankSvc: tankSvc}
+func NewHandler(tankSvc *service.TankService, frameBuffer *stream.FrameBuffer, natsConn *nats.Conn) *Handler {
+	return &Handler{
+		tankSvc:     tankSvc,
+		frameBuffer: frameBuffer,
+		natsConn:    natsConn,
+	}
 }
 
 func (h *Handler) CreateTank(c *gin.Context) {
