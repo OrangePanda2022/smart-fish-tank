@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"mind/internal/repo"
 
@@ -15,7 +16,7 @@ type TankParams struct {
 	TankID string `json:"tank_id" jsonschema:"description=需要鱼缸的唯一标识符 TankID"`
 }
 
-func NewTankTool(ctx context.Context, tankRepo *repo.TankRepo) tool.InvokableTool {
+func NewTankTool(ctx context.Context, tankRepo repo.TankRepository) tool.InvokableTool {
 	return utils.NewTool(
 		&schema.ToolInfo{
 			Name: "TankQueryTool",
@@ -31,6 +32,9 @@ func NewTankTool(ctx context.Context, tankRepo *repo.TankRepo) tool.InvokableToo
 			),
 		}, func(ctx context.Context, query *TankParams) (string, error) {
 			log.Println("tank_tool 被调用")
+			if tankRepo == nil {
+				return "", fmt.Errorf("tank repo 未初始化（NATS 连接失败）")
+			}
 			data, err := tankRepo.GetTank(query.TankID)
 			if err != nil {
 				return "", err

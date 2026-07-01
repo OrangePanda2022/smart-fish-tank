@@ -6,9 +6,14 @@ import (
 
 type Config struct {
 	Server   ServerConfig
+	NATS     NATSConfig
 	Milvus   MilvusConfig
 	LLM      LLMConfig
 	Database DatabaseConfig
+}
+
+type NATSConfig struct {
+	URL string
 }
 
 type ServerConfig struct {
@@ -38,6 +43,9 @@ func Load() *Config {
 		Server: ServerConfig{
 			Host: getEnv("SERVER_HOST", "0.0.0.0"),
 			Port: getEnv("SERVER_PORT", "6788"),
+		},
+		NATS: NATSConfig{
+			URL: getEnv("NATS_URL", "nats://localhost:4222"),
 		},
 		Milvus: MilvusConfig{
 			Addr:       getEnv("MILVUS_ADDR", "localhost:19530"),

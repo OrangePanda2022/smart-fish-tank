@@ -105,15 +105,6 @@ func convertToSensorData(dtoList []domain.SensorDataDTO) []*domain.SensorData {
 	return result
 }
 
-// func NewHandlerWithDeps(
-// 	tankRepo *repo.TankRepo,
-// 	sensorRepo *repo.SensorRepo,
-// 	milvusAddr, milvusCollection string,
-// ) *Handler {
-// 	milvus := vector.NewMilvusClient(milvusAddr, milvusCollection)
-// 	return NewHandler(tankRepo, sensorRepo, milvus)
-// }
-
 // var _ context.Context = (*handlerContext)(nil)
 
 // type handlerContext struct {

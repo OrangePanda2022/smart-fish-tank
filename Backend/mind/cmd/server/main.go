@@ -22,14 +22,26 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
+	// 先加载 .env，再读配置——否则 .env 里的 NATS_URL/LLM_API_KEY 等对 config.Load() 不可见
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	cfg := config.Load()
 
-	tankRepo := repo.NewTankRepo()
-	sensorRepo := repo.NewSensorRepo()
+	// NATS 仓储：向 tank/sensor 服务实时拉取数据；连接失败不致命，工具按调用返回错误给 agent
+	tankRepo, err := repo.NewTankNATSRepo(cfg.NATS.URL)
+	if err != nil {
+		log.Printf("WARN: tank NATS repo init failed: %v (tank tool will error per-call)", err)
+	} else {
+		defer tankRepo.Close()
+	}
+	sensorRepo, err := repo.NewSensorNATSRepo(cfg.NATS.URL)
+	if err != nil {
+		log.Printf("WARN: sensor NATS repo init failed: %v (sensor tool will error per-call)", err)
+	} else {
+		defer sensorRepo.Close()
+	}
 	// 向量数据库初始化
 	// milvus, err := vector.NewMilvusClient(context.Background(), cfg.Milvus.DBName, cfg.Milvus.Addr, cfg.Milvus.UserName, cfg.Milvus.Password)
 	// if err != nil {
