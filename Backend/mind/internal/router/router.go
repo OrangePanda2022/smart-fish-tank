@@ -17,4 +17,9 @@ func Register(h *server.Hertz, hdl *handler.Handler) {
 
 	v1 := h.Group("/api/v1")
 	v1.GET("/analyse/:tank_id", hdl.Analyse)
+
+	// 预测 + MPC 端点
+	v1.GET("/predict/:tank_id", hdl.Predict)
+	v1.GET("/predict/:tank_id/stream", hdl.PredictStream)
+	v1.GET("/predict/status", hdl.PredictStatus)
 }

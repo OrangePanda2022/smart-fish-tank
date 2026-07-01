@@ -2,7 +2,10 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"mind/internal/domain"
 	"mind/internal/service"
 
@@ -12,11 +15,13 @@ import (
 
 type Handler struct {
 	analyseSvc *service.AnalyseService
+	predictSvc *service.PredictService
 }
 
-func NewHandler(analyseSvc *service.AnalyseService) *Handler {
+func NewHandler(analyseSvc *service.AnalyseService, predictSvc *service.PredictService) *Handler {
 	return &Handler{
 		analyseSvc: analyseSvc,
+		predictSvc: predictSvc,
 	}
 }
 
@@ -62,6 +67,99 @@ func (h *Handler) Analyse(_ context.Context, c *app.RequestContext) {
 	})
 }
 
+// Predict 处理 GET /api/v1/predict/:tank_id
+// 调用方只需传入 tank_id，可选 horizon 查询参数
+func (h *Handler) Predict(_ context.Context, c *app.RequestContext) {
+	tankID := c.Param("tank_id")
+	if tankID == "" {
+		c.JSON(consts.StatusBadRequest, map[string]interface{}{
+			"code":    400,
+			"message": "tank_id is required",
+		})
+		return
+	}
+
+	// 默认预测12步（1小时 @ 5分钟步长），最多60步
+	horizon := 12
+	if v, err := strconv.Atoi(c.Query("horizon")); err == nil && v > 0 && v <= 60 {
+		horizon = v
+	}
+
+	resp, err := h.predictSvc.Predict(context.Background(), tankID, horizon)
+	if err != nil {
+		// 模型未加载返回 503，其他错误返回 500
+		code := 500
+		msg := fmt.Sprintf("prediction failed: %v", err)
+		if err.Error() == "预测模型未加载" {
+			code = 503
+			msg = "prediction service unavailable: model not loaded"
+		}
+		c.JSON(code, map[string]interface{}{
+			"code":    code,
+			"message": msg,
+		})
+		return
+	}
+
+	c.JSON(consts.StatusOK, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data":    resp,
+	})
+}
+
+// PredictStream 处理 SSE /api/v1/predict/:tank_id/stream
+// 每30秒推送一次新的预测结果
+func (h *Handler) PredictStream(_ context.Context, c *app.RequestContext) {
+	tankID := c.Param("tank_id")
+	if tankID == "" {
+		c.JSON(consts.StatusBadRequest, map[string]interface{}{
+			"code":    400,
+			"message": "tank_id is required",
+		})
+		return
+	}
+
+	c.Response.Header.Set("Content-Type", "text/event-stream")
+	c.Response.Header.Set("Cache-Control", "no-cache")
+	c.Response.Header.Set("Connection", "keep-alive")
+	c.Response.Header.Set("Transfer-Encoding", "chunked")
+
+	horizon := 12
+	if v, err := strconv.Atoi(c.Query("horizon")); err == nil && v > 0 && v <= 60 {
+		horizon = v
+	}
+
+	// 初始预测
+	resp, err := h.predictSvc.Predict(context.Background(), tankID, horizon)
+	if err != nil {
+		c.WriteString(fmt.Sprintf("event: error\ndata: %s\n\n", fmt.Sprintf("prediction failed: %v", err)))
+		c.Flush()
+		return
+	}
+
+	// 发送初始结果
+	c.WriteString(fmt.Sprintf("data: %s\n\n", mustJSON(resp)))
+	c.Flush()
+
+	// 保持连接，定期推送（简化实现：只发初始结果）
+	// 实际生产中可以用 ticker 做持续推送
+}
+
+// PredictStatus 处理 GET /api/v1/predict/status
+func (h *Handler) PredictStatus(_ context.Context, c *app.RequestContext) {
+	loaded, version, trainedAt := h.predictSvc.ModelStatus()
+	c.JSON(consts.StatusOK, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"model_loaded": loaded,
+			"version":      version,
+			"trained_at":    trainedAt,
+		},
+	})
+}
+
 func (h *Handler) analyseStream(c *app.RequestContext, tankID string, sensorData []*domain.SensorData) {
 	c.Response.Header.Set("Content-Type", "text/event-stream")
 	c.Response.Header.Set("Cache-Control", "no-cache")
@@ -99,41 +197,22 @@ func convertToSensorData(dtoList []domain.SensorDataDTO) []*domain.SensorData {
 			Oxygen:      dto.Oxygen,
 			Ammonia:     dto.Ammonia,
 			WaterLevel:  dto.WaterLevel,
+			TDS:         dto.TDS,
+			Nitrate:     dto.Nitrate,
+			Nitrite:     dto.Nitrite,
+			Chloride:    dto.Chloride,
 			Timestamp:   dto.Timestamp,
 		}
 	}
 	return result
 }
 
-// var _ context.Context = (*handlerContext)(nil)
-
-// type handlerContext struct {
-// 	ctx context.Context
-// }
-
-// func (hc *handlerContext) Deadline() (time.Time, bool) {
-// 	return hc.ctx.Deadline()
-// }
-
-// func (hc *handlerContext) Done() <-chan struct{} {
-// 	return hc.ctx.Done()
-// }
-
-// func (hc *handlerContext) Err() error {
-// 	return hc.ctx.Err()
-// }
-
-// func (hc *handlerContext) Value(key any) any {
-// 	return hc.ctx.Value(key)
-// }
-
-// func wrapContext(ctx context.Context) context.Context {
-// 	return &handlerContext{ctx: ctx}
-// }
-
-// func parseIntWithDefault(s string, defaultVal int) int {
-// 	if v, err := strconv.Atoi(s); err == nil {
-// 		return v
-// 	}
-// 	return defaultVal
-// }
+// mustJSON 将对象序列化为 JSON 字符串，失败时返回错误文本
+func mustJSON(v interface{}) string {
+	// 使用简洁的 JSON 序列化
+	data, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf(`{"error":"%v"}`, err)
+	}
+	return string(data)
+}

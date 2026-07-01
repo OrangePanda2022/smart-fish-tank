@@ -16,7 +16,7 @@ import (
 func CreateModel(ctx context.Context) (*ark.ChatModel, error) {
 	return ark.NewChatModel(ctx, &ark.ChatModelConfig{
 		APIKey: os.Getenv("API_KEY"),
-		Model:  "doubao-seed-2-0-mini-260215",
+		Model:  "doubao-seed-2-0-lite-260428",
 	})
 }
 

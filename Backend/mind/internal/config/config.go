@@ -2,14 +2,16 @@ package config
 
 import (
 	"os"
+	"strconv"
 )
 
 type Config struct {
-	Server   ServerConfig
-	NATS     NATSConfig
-	Milvus   MilvusConfig
-	LLM      LLMConfig
-	Database DatabaseConfig
+	Server     ServerConfig
+	NATS       NATSConfig
+	Milvus     MilvusConfig
+	LLM        LLMConfig
+	Database   DatabaseConfig
+	Prediction PredictionConfig
 }
 
 type NATSConfig struct {
@@ -38,6 +40,13 @@ type DatabaseConfig struct {
 	DSN string
 }
 
+type PredictionConfig struct {
+	ModelPath   string
+	Horizon     int
+	StateWeight float64
+	CtrlWeight  float64
+}
+
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -61,6 +70,12 @@ func Load() *Config {
 		Database: DatabaseConfig{
 			DSN: getEnv("DATABASE_DSN", ""),
 		},
+		Prediction: PredictionConfig{
+			ModelPath:   getEnv("KOOPMAN_MODEL_PATH", "./models/koopman_model.json"),
+			Horizon:     parseIntEnv("MPC_HORIZON", "12"),
+			StateWeight: parseFloatEnv("MPC_STATE_WEIGHT", "10.0"),
+			CtrlWeight:  parseFloatEnv("MPC_CTRL_WEIGHT", "1.0"),
+		},
 	}
 }
 
@@ -69,4 +84,22 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func parseIntEnv(key, defaultValue string) int {
+	v := getEnv(key, defaultValue)
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		n, _ = strconv.Atoi(defaultValue)
+	}
+	return n
+}
+
+func parseFloatEnv(key, defaultValue string) float64 {
+	v := getEnv(key, defaultValue)
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		f, _ = strconv.ParseFloat(defaultValue, 64)
+	}
+	return f
 }

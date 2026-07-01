@@ -49,31 +49,29 @@ func (s *AnalyseService) generateReport(ctx context.Context, tankID string, sens
 		schema.UserMessage(fmt.Sprintf("鱼缸 ID 为 %s", tankID)),
 	}
 
-	// if len(sensorData) > 0 {
-	// 	dataBytes, _ := json.Marshal(sensorData)
-	// 	initialMsgs = append(initialMsgs, schema.UserMessage(fmt.Sprintf("传感器数据: %s", string(dataBytes))))
+	if len(sensorData) > 0 {
+		dataBytes, _ := json.Marshal(sensorData)
+		initialMsgs = append(initialMsgs, schema.UserMessage(fmt.Sprintf("传感器数据: %s", string(dataBytes))))
+	}
+
+	// video := schema.MessageInputPart{
+	// 	Type: schema.ChatMessagePartTypeVideoURL,
+	// 	Video: &schema.MessageInputVideo{
+	// 		MessagePartCommon: schema.MessagePartCommon{
+	// 			URL:      &url,
+	// 			MIMEType: "video/mp4",
+	// 		},
+	// 	},
 	// }
 
-	url := "https://aqua.cn-nb1.rains3.com/VID_20260416_161729.mp4"
+	// input := schema.Message{
+	// 	Role: schema.User,
+	// 	UserInputMultiContent: []schema.MessageInputPart{
+	// 		video,
+	// 	},
+	// }
 
-	video := schema.MessageInputPart{
-		Type: schema.ChatMessagePartTypeVideoURL,
-		Video: &schema.MessageInputVideo{
-			MessagePartCommon: schema.MessagePartCommon{
-				URL:      &url,
-				MIMEType: "video/mp4",
-			},
-		},
-	}
-
-	input := schema.Message{
-		Role: schema.User,
-		UserInputMultiContent: []schema.MessageInputPart{
-			video,
-		},
-	}
-
-	initialMsgs = append(initialMsgs, &input)
+	// initialMsgs = append(initialMsgs, &input)
 
 	// 这里直接调用 ReAct MOE 来生成分析报告
 	// finalMsg, _ := s.aquaMoE.Generate(ctx, initialMsgs)

@@ -59,16 +59,14 @@ func (r *TankNATSRepo) GetTank(tankID string) (*domain.Tank, error) {
 		}
 	}
 
-	// 解析 tank 服务的响应
-	// 注意：tank 服务的 domain.Tank 无 json tag，Go 默认按字段名（PascalCase）序列化，
-	// 故这里用 PascalCase 匹配；gorm.Model 的 ID/UserID/UpdatedAt/DeletedAt 多余字段被默认忽略。
+	// 解析 tank 服务的响应（snake_case JSON tags）
 	var raw struct {
-		TankID     string `json:"TankID"`
-		TankName   string `json:"TankName"`
-		TankSize   int    `json:"TankSize"`
-		FishCount  int    `json:"FishCount"`
-		FishStatus string `json:"FishStatus"`
-		CreatedAt  string `json:"CreatedAt"`
+		TankID     string `json:"tank_id"`
+		TankName   string `json:"tank_name"`
+		TankSize   int    `json:"tank_size"`
+		FishCount  int    `json:"fish_count"`
+		FishStatus string `json:"fish_status"`
+		CreatedAt  string `json:"CreatedAt"` // gorm.Model 无 json tag，保持 CamelCase
 	}
 	if err := json.Unmarshal(msg.Data, &raw); err != nil {
 		return nil, fmt.Errorf("解析 tank 响应失败: %w", err)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +11,9 @@ import (
 	"mind/internal/agent/react"
 	"mind/internal/agent/tools"
 	"mind/internal/config"
+	"mind/internal/domain"
 	"mind/internal/handler"
+	"mind/internal/predict/koopman"
 	"mind/internal/repo"
 	"mind/internal/router"
 	"mind/internal/service"
@@ -19,6 +22,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	hertzlogger "github.com/hertz-contrib/logger/accesslog"
 	"github.com/joho/godotenv"
+	"github.com/nats-io/nats.go"
 )
 
 func main() {
@@ -29,39 +33,30 @@ func main() {
 	}
 	cfg := config.Load()
 
-	// NATS 仓储：向 tank/sensor 服务实时拉取数据；连接失败不致命，工具按调用返回错误给 agent
-	tankRepo, err := repo.NewTankNATSRepo(cfg.NATS.URL)
-	if err != nil {
-		log.Printf("WARN: tank NATS repo init failed: %v (tank tool will error per-call)", err)
-	} else {
-		defer tankRepo.Close()
-	}
-	sensorRepo, err := repo.NewSensorNATSRepo(cfg.NATS.URL)
-	if err != nil {
-		log.Printf("WARN: sensor NATS repo init failed: %v (sensor tool will error per-call)", err)
-	} else {
-		defer sensorRepo.Close()
-	}
-	// 向量数据库初始化
-	// milvus, err := vector.NewMilvusClient(context.Background(), cfg.Milvus.DBName, cfg.Milvus.Addr, cfg.Milvus.UserName, cfg.Milvus.Password)
-	// if err != nil {
-	// 	log.Fatalf("failed to create Milvus client: %v", err)
-	// }
+	// NATS 仓储：向 tank/sensor 服务实时拉取数据；连接失败不致命，工具/预测按调用返回错误给 agent。
+	// 用具体指针变量持有连接（供 Close/Conn），用接口变量喂给工具/预测服务——
+	// 这样 NATS 失败时接口为真 nil，规避 Go nil-interface 陷阱，使工具与 predict 的 nil 守卫真正生效。
+	// （未采用副本的内存 mock 降级，保留 SHIT2 的 nil 守卫路线。）
+	var tankRepo repo.TankRepository
+	var sensorRepo repo.SensorRepository
 
-	// 向量模型初始化
-	// EmbeddingModel, err := vector.CreateEmbeddingModel(context.Background())
-	// if err != nil {
-	// 	log.Fatalf("failed to create embedding model: %v", err)
-	// }
+	tankNATS, tankErr := repo.NewTankNATSRepo(cfg.NATS.URL)
+	if tankErr != nil {
+		log.Printf("WARN: tank NATS repo init failed: %v (tank tool will error per-call)", tankErr)
+	} else {
+		tankRepo = tankNATS
+		defer tankNATS.Close()
+	}
 
-	// 创建检索器
-	// retriever, err := vector.NewRetriever(context.Background(), milvus, cfg.Milvus.Collection, EmbeddingModel)
-	// if err != nil {
-	// 	log.Fatalf("failed to create retriever: %v", err)
-	// }
+	sensorNATS, sensorErr := repo.NewSensorNATSRepo(cfg.NATS.URL)
+	if sensorErr != nil {
+		log.Printf("WARN: sensor NATS repo init failed: %v (sensor tool will error per-call)", sensorErr)
+	} else {
+		sensorRepo = sensorNATS
+		defer sensorNATS.Close()
+	}
 
 	chatmodel, err := llm.CreateModel(context.Background())
-
 	if err != nil {
 		fmt.Printf("Failed to create chat model: %v\n", err)
 		os.Exit(1)
@@ -75,37 +70,52 @@ func main() {
 		// tools.NewSearchTool(context.Background()),
 	}
 
-	// agent 初始化
-	// auqaAgent, err := agent.InitAgent(context.Background(), chatmodel, baseTools)
-	// if err != nil {
-	// 	log.Fatalf("failed to create agent: %v", err)
-	// }
-	// runner 初始化
-	// aquaRunner := agent.InitRunner(context.Background(), auqaAgent, invokableTools)
-
 	// ReAct Agent 初始化
 	aquaRAAgent, err := react.ReactAgent(context.Background(), chatmodel, baseTools)
-
-	// MoE 初始化
-	// hst, err := moe.NewHost(context.Background(), chatmodel)
-	// if err != nil {
-	// 	log.Fatalf("failed to create MoE host: %v", err)
-	// }
-	// experts := []*host.Specialist{
-	// 	moe.NewExpert(context.Background(), aquaRAAgent),
-	// }
-	// summarizer := moe.NewSummarizer(context.Background(), chatmodel)
-	// MoE, err := moe.NewMOEAgent(context.Background(), *hst, experts, summarizer)
-
-	// Graph 初始化
-	// _, err = flows.AquaGraph(context.Background(), chatmodel, invokableTools)
-
 	if err != nil {
 		log.Fatalf("failed to create AquaAgent: %v", err)
 	}
 
 	analSvc := service.NewAnalyseService(aquaRAAgent)
-	hdl := handler.NewHandler(analSvc)
+
+	// 加载 Koopman 预测模型；加载失败不致命，Predict 端点会返回 503
+	koopmanModel, err := koopman.LoadModel(cfg.Prediction.ModelPath)
+	if err != nil {
+		log.Printf("Koopman模型加载失败: %v，预测服务不可用", err)
+		koopmanModel = &koopman.Model{} // 空模型, IsLoaded()=false
+	}
+
+	predictSvc := service.NewPredictService(
+		koopmanModel,
+		sensorRepo,
+		cfg.Prediction.Horizon,
+		cfg.Prediction.StateWeight,
+		cfg.Prediction.CtrlWeight,
+	)
+
+	// 后台: 订阅 NATS sensor 事件，持续更新预测状态缓存
+	if sensorNATS != nil {
+		go func() {
+			nc := sensorNATS.Conn()
+			if nc == nil {
+				return
+			}
+			sub, err := nc.Subscribe("sensor.update", func(msg *nats.Msg) {
+				var data domain.SensorData
+				if json.Unmarshal(msg.Data, &data) == nil {
+					predictSvc.UpdateState(&data)
+				}
+			})
+			if err != nil {
+				log.Printf("NATS sensor.update 订阅失败: %v", err)
+				return
+			}
+			defer sub.Unsubscribe()
+			select {} // 阻塞保持订阅
+		}()
+	}
+
+	hdl := handler.NewHandler(analSvc, predictSvc)
 
 	h := server.Default(server.WithHostPorts(":" + cfg.Server.Port))
 	h.Use(hertzlogger.New())
