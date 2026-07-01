@@ -24,8 +24,8 @@ var transport = &http.Transport{
 
 	// HTTPS 握手超时
 	TLSHandshakeTimeout: 5 * time.Second,
-	// 等待后端 Header 返回的超时
-	ResponseHeaderTimeout: 10 * time.Second,
+	// 等待后端 Header 返回的超时（mind ReAct 多轮调工具耗时长，留足余量）
+	ResponseHeaderTimeout: 120 * time.Second,
 
 	// 允许 Gzip，减少带宽
 	DisableCompression: false,

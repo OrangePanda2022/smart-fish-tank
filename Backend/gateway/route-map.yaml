@@ -5,3 +5,5 @@ routes:
   /api/v1/tanks: sensor-service
   /api/v1/tank: tank-service
   /api/v1/devices: sensor-service
+  /api/v1/analyse: mind-service
+  /api/v1/predict: mind-service

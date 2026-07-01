@@ -55,7 +55,7 @@ func NewRouter(handler *Handler, jwks keyfunc.Keyfunc, sessionStore util.Session
 
 		// 管理员接口：当前仅做登录态保护，具体角色校验由服务层兜底
 		adminProtected := v1.Group("/admin")
-		authGroup.Use(middleware.AuthMiddleware(jwks))
+		adminProtected.Use(middleware.AuthMiddleware(jwks))
 		{
 			adminProtected.PATCH("/users/:user_id/status", handler.AdminSetUserStatus)
 			adminProtected.PATCH("/users/:user_id/role", handler.AdminSetUserRole)
