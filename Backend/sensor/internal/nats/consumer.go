@@ -38,22 +38,17 @@ func (c *NATSConsumer) Start(ctx context.Context) error {
 
 		var resp interface{}
 
-		switch req.Type {
-		case "sensor":
-			sensorData, err := c.sensorRepo.QueryHistoryByTank(
-				req.TankID,
-				time.Now().Add(-48*time.Hour).Format(time.RFC3339),
-				time.Now().Format(time.RFC3339),
-				req.Limit,
-			)
-			if err != nil {
-				resp = map[string]string{"error": err.Error()}
-			} else {
-				resp = sensorData
-			}
-			break
-		default:
-			resp = map[string]string{"error": "bad request"}
+		// subject 已路由到 sensor 服务，无需 type 字段
+		sensorData, err := c.sensorRepo.QueryHistoryByTank(
+			req.TankID,
+			time.Now().Add(-48*time.Hour).Format(time.RFC3339),
+			time.Now().Format(time.RFC3339),
+			req.Limit,
+		)
+		if err != nil {
+			resp = map[string]string{"error": err.Error()}
+		} else {
+			resp = sensorData
 		}
 
 		// 返回响应

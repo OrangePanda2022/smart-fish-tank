@@ -71,11 +71,13 @@ func main() {
 	if err != nil {
 		log.Printf("初始化NATS消费者失败: %v", err)
 	} else {
-		if err := natsConsumer.Start(context.Background()); err != nil {
-			log.Printf("启动NATS消费者失败: %v", err)
-		} else {
-			defer natsConsumer.Stop()
-		}
+		defer natsConsumer.Stop()
+		// Start 内部 QueueSubscribe 后会阻塞在 <-ctx.Done()，须放 goroutine，否则 HTTP 服务器无法启动
+		go func() {
+			if err := natsConsumer.Start(context.Background()); err != nil {
+				log.Printf("启动NATS消费者失败: %v", err)
+			}
+		}()
 	}
 
 	// 初始化处理器

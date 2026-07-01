@@ -26,7 +26,7 @@ func NewNATSConsumer(URL string, tankRepo *repo.TankRepo) (*NATSConsumer, error)
 }
 
 func (c *NATSConsumer) Start(ctx context.Context) error {
-	_, err := c.NATSClient.QueueSubscribe("sensor.get", "sensor-group", func(msg *nats.Msg) {
+	_, err := c.NATSClient.QueueSubscribe("tank.get", "tank-group", func(msg *nats.Msg) {
 		var req request.GetTankRequest
 
 		// 解析请求
@@ -37,12 +37,10 @@ func (c *NATSConsumer) Start(ctx context.Context) error {
 
 		var resp interface{}
 
-		switch req.Type {
-		case "tank":
-			if req.Limit != 1 {
-				resp = map[string]string{"error": "bad request"}
-				break
-			}
+		// subject 已路由到 tank 服务，无需 type 字段；tank 查询要求 limit == 1
+		if req.Limit != 1 {
+			resp = map[string]string{"error": "bad request"}
+		} else {
 			tankData, err := c.tankRepo.GetTankByTankID(
 				ctx,
 				req.TankID,
@@ -52,9 +50,6 @@ func (c *NATSConsumer) Start(ctx context.Context) error {
 			} else {
 				resp = tankData
 			}
-			break
-		default:
-			resp = map[string]string{"error": "bad request"}
 		}
 
 		// 返回响应
