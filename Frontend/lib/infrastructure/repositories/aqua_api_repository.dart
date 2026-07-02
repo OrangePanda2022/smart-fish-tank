@@ -22,6 +22,7 @@ class AquaApiRepository implements AquariumRepository {
   final String baseUrl;
 
   static const _analysisScoreKeyPrefix = 'analysis_score_';
+  static const _analysisSummaryKeyPrefix = 'analysis_summary_';
   static final Map<String, AquariumDashboard> _dashboardCache = {};
   static final Map<String, List<SensorReading>> _historyCache = {};
   static AquariumDashboard? _lastDashboard;
@@ -31,7 +32,7 @@ class AquaApiRepository implements AquariumRepository {
     try {
       final tank = await _loadTank();
       final latest = await _loadLatest(tank.id);
-      final analysis = await _loadAnalysis(tank.id);
+      final analysis = await _loadCachedAnalysisSummary(tank.id);
       final prediction = await _loadPrediction(tank.id, latest);
       final cachedScore =
           await _loadCachedAnalysisScore(tank.id) ??
@@ -89,6 +90,7 @@ class AquaApiRepository implements AquariumRepository {
     );
     final report = AnalysisReport.fromJson(data);
     await _cacheAnalysisScore(tankId, report.statusScore);
+    await _cacheAnalysisSummary(tankId, _analysisSummaryFromReport(report));
     _cacheDashboardScore(tankId, report.statusScore);
     return report;
   }
@@ -132,19 +134,6 @@ class AquaApiRepository implements AquariumRepository {
     final data = await _getJson('/api/v1/tanks/$tankId/sensors/latest');
     final reading = SensorReading.fromJson(data);
     return reading.isUseful ? reading : AquariumDashboard.empty().latest;
-  }
-
-  Future<String?> _loadAnalysis(String tankId) async {
-    if (tankId.isEmpty) return null;
-    try {
-      final data = await _getJson('/api/v1/analyse/$tankId');
-      final report = AnalysisReport.fromJson(data);
-      if (report.summary.isNotEmpty) return report.summary;
-      if (report.reasoning.isNotEmpty) return report.reasoning;
-    } catch (_) {
-      return null;
-    }
-    return null;
   }
 
   Future<PredictionSummary> _loadPrediction(
@@ -197,9 +186,28 @@ class AquaApiRepository implements AquariumRepository {
     return preferences.getInt('$_analysisScoreKeyPrefix$tankId');
   }
 
+  Future<String?> _loadCachedAnalysisSummary(String tankId) async {
+    if (tankId.isEmpty) return null;
+    final preferences = await SharedPreferences.getInstance();
+    final summary = preferences.getString('$_analysisSummaryKeyPrefix$tankId');
+    if (summary == null || summary.isEmpty) return null;
+    return summary;
+  }
+
   Future<void> _cacheAnalysisScore(String tankId, int score) async {
     if (tankId.isEmpty) return;
     final preferences = await SharedPreferences.getInstance();
     await preferences.setInt('$_analysisScoreKeyPrefix$tankId', score);
+  }
+
+  Future<void> _cacheAnalysisSummary(String tankId, String summary) async {
+    if (tankId.isEmpty || summary.isEmpty) return;
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString('$_analysisSummaryKeyPrefix$tankId', summary);
+  }
+
+  String _analysisSummaryFromReport(AnalysisReport report) {
+    if (report.summary.isNotEmpty) return report.summary;
+    return report.reasoning;
   }
 }
