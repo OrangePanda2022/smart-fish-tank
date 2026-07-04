@@ -148,10 +148,10 @@ func (s *SensorService) GetHistoryByTank(tankID, start, end string, limit int) (
 
 	// 设置默认值
 	if start == "" {
-		start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
+		start = time.Now().Add(-24 * time.Hour).Format(time.RFC3339Nano)
 	}
 	if end == "" {
-		end = time.Now().Format(time.RFC3339)
+		end = time.Now().Format(time.RFC3339Nano)
 	}
 	if limit <= 0 {
 		limit = 100

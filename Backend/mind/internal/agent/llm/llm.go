@@ -14,9 +14,13 @@ import (
 // 创建 Model
 
 func CreateModel(ctx context.Context) (*ark.ChatModel, error) {
+	model := os.Getenv("LLM_MODEL")
+	if model == "" {
+		model = "doubao-seed-2-0-lite-260428" // 默认 lite；如需视觉改设 LLM_MODEL 为视觉模型
+	}
 	return ark.NewChatModel(ctx, &ark.ChatModelConfig{
 		APIKey: os.Getenv("API_KEY"),
-		Model:  "doubao-seed-2-0-lite-260428",
+		Model:  model,
 	})
 }
 

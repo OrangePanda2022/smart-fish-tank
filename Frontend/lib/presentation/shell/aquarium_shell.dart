@@ -72,8 +72,12 @@ class _AquariumShellState extends State<AquariumShell> {
             onRefresh: _refresh,
             onAnalyze: _repository.runAnalysis,
           ),
-          DataCenterScreen(dashboard: dashboard, repository: _repository),
-          DeviceScreen(dashboard: dashboard),
+          DataCenterScreen(
+            dashboard: dashboard,
+            repository: _repository,
+            onRefresh: _refresh,
+          ),
+          DeviceScreen(dashboard: dashboard, repository: _repository),
           ProfileScreen(dashboard: dashboard),
         ];
 

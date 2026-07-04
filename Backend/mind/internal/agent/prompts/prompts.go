@@ -9,12 +9,22 @@ var SysPrompt = schema.SystemMessage(`
 JSON 结构必须严格遵守以下格式：
 {
 	"status_score": 一个 0-100 的分数，表示当前鱼缸的健康状况，分数越高表示状况越好,
-	"summary": "简短的现状总结",
-	"actions": [
-		{"device": "设备名称", "action": "行为描述"},
-		{"device": "设备名称", "action": "行为描述"}
-	],
-	"reasoning": "你从鱼缸中看到了什么？并且基于此做出了什么决定"
+	"zh": {
+		"summary": "中文简短现状总结",
+		"actions": [
+			{"device": "中文设备名称", "action": "中文行为描述"},
+			{"device": "中文设备名称", "action": "中文行为描述"}
+		],
+		"reasoning": "中文说明你从鱼缸中看到了什么，并且基于此做出了什么决定"
+	},
+	"en": {
+		"summary": "Brief status summary in English",
+		"actions": [
+			{"device": "English device name", "action": "English action description"},
+			{"device": "English device name", "action": "English action description"}
+		],
+		"reasoning": "Explain in English what you observed in the aquarium and why you made this decision"
+	}
 }`)
 
 var UserPrompt = schema.UserMessage(`用户当前位置在武汉，请对鱼缸进行分析并输出决策 JSON。`)

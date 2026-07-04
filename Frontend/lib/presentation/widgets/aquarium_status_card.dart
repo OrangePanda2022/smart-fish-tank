@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/aquarium_dashboard.dart';
 import '../../domain/entities/sensor_reading.dart';
@@ -18,7 +19,7 @@ class AquariumStatusCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: SizedBox(
-        height: 270,
+        height: 290,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -45,7 +46,9 @@ class AquariumStatusCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          score == null ? '鱼缸状态  未分析' : '鱼缸状态  良好',
+                          score == null
+                              ? context.tr('鱼缸状态  未分析')
+                              : context.tr('鱼缸状态  良好'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 23,
@@ -62,8 +65,8 @@ class AquariumStatusCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        '设备在线',
+                      Text(
+                        context.tr('设备在线'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -76,22 +79,29 @@ class AquariumStatusCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        score == null ? '未分析' : '$score',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 64,
-                          height: 0.95,
-                          fontWeight: FontWeight.w900,
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            score == null ? context.tr('未分析') : '$score',
+                            maxLines: 1,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 64,
+                              height: 0.95,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                       ),
                       if (score != null) ...[
                         const SizedBox(width: 8),
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
                           child: Text(
-                            '分',
-                            style: TextStyle(
+                            context.tr('分'),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
@@ -104,7 +114,7 @@ class AquariumStatusCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   score == null
                       ? Text(
-                          '点击立即分析生成健康评分',
+                          context.tr('点击立即分析生成健康评分'),
                           style: TextStyle(
                             color: Colors.white.withAlpha(215),
                             fontSize: 15,
@@ -161,7 +171,7 @@ class StatusMetricStrip extends StatelessWidget {
           StatusMetric(
             icon: CupertinoIcons.thermometer,
             value: '${sensor.temperature.toStringAsFixed(1)}°C',
-            label: '水温',
+            label: context.tr('水温'),
           ),
           StatusMetric(
             icon: CupertinoIcons.drop_fill,
@@ -171,12 +181,12 @@ class StatusMetricStrip extends StatelessWidget {
           StatusMetric(
             icon: CupertinoIcons.circle_grid_hex_fill,
             value: '${sensor.oxygen.toStringAsFixed(1)} mg/L',
-            label: '溶氧',
+            label: context.tr('溶氧'),
           ),
-          const StatusMetric(
+          StatusMetric(
             icon: CupertinoIcons.waveform_path_ecg,
-            value: '已喂食',
-            label: '今天 08:00',
+            value: context.tr('已喂食'),
+            label: context.tr('今天 08:00'),
           ),
         ],
       ),

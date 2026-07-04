@@ -24,5 +24,79 @@ services:
       - "8222:8222"
     restart: unless-stopped
 
+  auth:
+    image: alpine:latest
+    container_name: aqua-auth
+    working_dir: /app
+    command: /bin/sh -c "cp /app/auth /tmp/auth && chmod +x /tmp/auth && exec /tmp/auth"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./auth:/app:z
+      - ./data/auth:/data:z
+    restart: unless-stopped
+
+  sensor:
+    image: alpine:latest
+    container_name: aqua-sensor
+    working_dir: /app
+    command: /bin/sh -c "cp /app/sensor /tmp/sensor && chmod +x /tmp/sensor && exec /tmp/sensor"
+    depends_on:
+      - influxdb3
+      - nanomq
+      - nats
+    ports:
+      - "8085:8085"
+    volumes:
+      - ./sensor:/app:z
+      - ./data/sensor:/data:z
+    restart: unless-stopped
+
+  tank:
+    image: alpine:latest
+    container_name: aqua-tank
+    working_dir: /app
+    command: /bin/sh -c "cp /app/tank /tmp/tank && chmod +x /tmp/tank && exec /tmp/tank"
+    depends_on:
+      - nats
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./tank:/app:z
+      - ./data/tank:/data:z
+    restart: unless-stopped
+
+  mind:
+    image: alpine:latest
+    container_name: aqua-mind
+    working_dir: /app
+    command: /bin/sh -c "cp /app/mind /tmp/mind && chmod +x /tmp/mind && exec /tmp/mind"
+    depends_on:
+      - nats
+      - sensor
+      - tank
+    ports:
+      - "6788:6788"
+    volumes:
+      - ./mind:/app:z
+      - ./data/mind:/data:z
+    restart: unless-stopped
+
+  gateway:
+    image: alpine:latest
+    container_name: aqua-gateway
+    working_dir: /app
+    command: /bin/sh -c "cp /app/gateway /tmp/gateway && chmod +x /tmp/gateway && exec /tmp/gateway"
+    depends_on:
+      - auth
+      - sensor
+      - tank
+      - mind
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./gateway:/app:z
+    restart: unless-stopped
+
 volumes:
   influxdb3-data:

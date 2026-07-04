@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../domain/entities/tank_info.dart';
@@ -18,11 +19,13 @@ class HomeHeader extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Expanded(
+            Expanded(
               child: Row(
                 children: [
-                  Flexible(child: Text('我的鱼缸', style: AppText.title)),
-                  SizedBox(width: 7),
+                  Flexible(
+                    child: Text(context.tr('我的鱼缸'), style: AppText.title),
+                  ),
+                  const SizedBox(width: 7),
                 ],
               ),
             ),
@@ -56,11 +59,14 @@ class DataHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Text('数据中心', style: AppText.compactTitle),
-        SizedBox(width: 8),
-        Icon(CupertinoIcons.question_circle, color: AppColors.secondaryText),
+        Text(context.tr('数据中心'), style: AppText.compactTitle),
+        const SizedBox(width: 8),
+        const Icon(
+          CupertinoIcons.question_circle,
+          color: AppColors.secondaryText,
+        ),
       ],
     );
   }
@@ -85,7 +91,7 @@ class HistoryTopBar extends StatelessWidget {
               icon: const Icon(CupertinoIcons.chevron_left, size: 28),
             ),
           ),
-          const Text('历史数据', style: AppText.navTitle),
+          Text(context.tr('历史数据'), style: AppText.navTitle),
           Align(
             alignment: Alignment.centerRight,
             child: IconButton(

@@ -7,5 +7,12 @@ abstract class AquariumRepository {
 
   Future<List<SensorReading>> loadHistory(String tankId);
 
+  Future<SensorReading> submitSensorReading(
+    String tankId,
+    SensorReading reading,
+  );
+
   Future<AnalysisReport> runAnalysis(String tankId);
+
+  Uri videoStreamUri(String tankId);
 }

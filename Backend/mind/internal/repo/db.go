@@ -13,3 +13,8 @@ type SensorRepository interface {
 type TankRepository interface {
 	GetTank(tankID string) (*domain.Tank, error)
 }
+
+// FrameRepository 抽象鱼缸最新帧获取；nats (TankNATSRepo) 实现满足。
+type FrameRepository interface {
+	GetLatestFrame(tankID string) ([]byte, error)
+}

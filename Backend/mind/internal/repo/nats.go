@@ -82,6 +82,27 @@ func (r *TankNATSRepo) GetTank(tankID string) (*domain.Tank, error) {
 	}, nil
 }
 
+// GetLatestFrame 通过 NATS 向 tank 服务请求最新一帧 JPEG。
+// 返回值约定: (jpeg, nil) = 有帧; (nil, nil) = 无帧(优雅降级); (nil, err) = 传输错误。
+// tank.frame 成功时回原始 JPEG 字节，无帧/坏请求回 {"error":"..."} JSON；
+// 这里按 JPEG SOI(0xFF 0xD8) 判定有效帧，非 JPEG 一律视为无帧。
+func (r *TankNATSRepo) GetLatestFrame(tankID string) ([]byte, error) {
+	reqBytes, _ := json.Marshal(map[string]any{"tank_id": tankID})
+
+	msg, err := r.nc.Request("tank.frame", reqBytes, 2*time.Second)
+	if err != nil {
+		if err == nats.ErrTimeout {
+			return nil, fmt.Errorf("tank.frame NATS 超时")
+		}
+		return nil, fmt.Errorf("tank.frame NATS 请求失败: %w", err)
+	}
+
+	if len(msg.Data) >= 2 && msg.Data[0] == 0xFF && msg.Data[1] == 0xD8 {
+		return msg.Data, nil
+	}
+	return nil, nil // 无帧，非错误
+}
+
 func (r *TankNATSRepo) Close() {
 	if r.nc != nil {
 		r.nc.Drain()
@@ -167,8 +188,8 @@ func (r *SensorNATSRepo) GetLatestSensorData(tankID string, limit int) ([]*domai
 			WaterLevel:  raw.WaterLevel,
 			TDS:         raw.TDS,
 			Nitrate:     raw.Nitrate,
-			Nitrite:    raw.Nitrite,
-			Chloride:   raw.Chloride,
+			Nitrite:     raw.Nitrite,
+			Chloride:    raw.Chloride,
 			Timestamp:   raw.Timestamp,
 		}
 	}

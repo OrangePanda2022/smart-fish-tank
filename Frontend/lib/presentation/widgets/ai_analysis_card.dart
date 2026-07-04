@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_shadow.dart';
 import '../../core/theme/app_text.dart';
@@ -43,22 +44,33 @@ class _AiAnalysisCardState extends State<AiAnalysisCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('AI 智能分析', style: AppText.titleSmall),
+                Text(context.tr('AI 智能分析'), style: AppText.titleSmall),
                 const SizedBox(height: 8),
-                const Text('上次分析：今天 09:30', style: AppText.caption),
+                Text(context.tr('上次分析：今天 09:30'), style: AppText.caption),
                 const SizedBox(height: 20),
                 Row(
-                  children: const [
-                    HealthPill(icon: CupertinoIcons.drop_fill, text: '水质正常'),
-                    SizedBox(width: 10),
-                    HealthPill(icon: CupertinoIcons.thermometer, text: '温度适宜'),
-                    SizedBox(width: 10),
-                    HealthPill(icon: Icons.set_meal_rounded, text: '鱼儿活跃'),
+                  children: [
+                    HealthPill(
+                      icon: CupertinoIcons.drop_fill,
+                      text: context.tr('水质正常'),
+                    ),
+                    const SizedBox(width: 10),
+                    HealthPill(
+                      icon: CupertinoIcons.thermometer,
+                      text: context.tr('温度适宜'),
+                    ),
+                    const SizedBox(width: 10),
+                    HealthPill(
+                      icon: Icons.set_meal_rounded,
+                      text: context.tr('鱼儿活跃'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
                 GradientButton(
-                  text: _isAnalyzing ? '分析中...' : '立即分析',
+                  text: _isAnalyzing
+                      ? context.tr('分析中...')
+                      : context.tr('立即分析'),
                   icon: CupertinoIcons.sparkles,
                   isBusy: _isAnalyzing,
                   onTap: _analyzeNow,
@@ -90,9 +102,9 @@ class _AiAnalysisCardState extends State<AiAnalysisCard> {
       if (!mounted) return;
       _showAnalysis(context, analysis);
       widget.onAnalysisComplete();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      _showAnalysisError(context);
+      _showAnalysisError(context, _analysisErrorMessage(error));
     } finally {
       if (mounted) {
         setState(() {
@@ -103,6 +115,9 @@ class _AiAnalysisCardState extends State<AiAnalysisCard> {
   }
 
   void _showAnalysis(BuildContext context, AnalysisReport report) {
+    final content = report.contentForLanguageCode(
+      context.l10n.locale.languageCode,
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -137,24 +152,24 @@ class _AiAnalysisCardState extends State<AiAnalysisCard> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  _AnalysisHero(report: report),
+                  _AnalysisHero(report: report, content: content),
                   const SizedBox(height: 14),
                   _InfoGrid(report: report),
                   const SizedBox(height: 14),
                   _ReportSection(
                     icon: CupertinoIcons.doc_text_fill,
-                    title: '状态概要',
-                    child: Text(report.summary, style: AppText.body),
+                    title: context.tr('状态概要'),
+                    child: Text(content.summary, style: AppText.body),
                   ),
                   const SizedBox(height: 14),
                   _ReportSection(
                     icon: CupertinoIcons.slider_horizontal_3,
-                    title: '建议操作',
-                    child: report.actions.isEmpty
-                        ? const Text('暂无建议操作', style: AppText.caption)
+                    title: context.tr('建议操作'),
+                    child: content.actions.isEmpty
+                        ? Text(context.tr('暂无建议操作'), style: AppText.caption)
                         : Column(
                             children: [
-                              for (final action in report.actions)
+                              for (final action in content.actions)
                                 _ActionRow(action: action),
                             ],
                           ),
@@ -162,8 +177,8 @@ class _AiAnalysisCardState extends State<AiAnalysisCard> {
                   const SizedBox(height: 14),
                   _ReportSection(
                     icon: CupertinoIcons.lightbulb_fill,
-                    title: '推理过程',
-                    child: Text(report.reasoning, style: AppText.body),
+                    title: context.tr('推理过程'),
+                    child: Text(content.reasoning, style: AppText.body),
                   ),
                   const SizedBox(height: 18),
                   _PrintReportButton(
@@ -180,7 +195,12 @@ class _AiAnalysisCardState extends State<AiAnalysisCard> {
     );
   }
 
-  void _showAnalysisError(BuildContext context) {
+  String _analysisErrorMessage(Object error) {
+    if (error is StateError) return error.message;
+    return context.tr('分析请求失败或超时，请确认后端服务可用后重试。');
+  }
+
+  void _showAnalysisError(BuildContext context, String message) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -188,17 +208,17 @@ class _AiAnalysisCardState extends State<AiAnalysisCard> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) {
-        return const Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, 34),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 34),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('AI 分析失败', style: AppText.titleSmall),
-              SizedBox(height: 12),
+              Text(context.tr('AI 分析失败'), style: AppText.titleSmall),
+              const SizedBox(height: 12),
               Text(
-                '分析请求失败或超时，请确认后端服务可用后重试。',
-                style: TextStyle(
+                message,
+                style: const TextStyle(
                   color: AppColors.ink,
                   height: 1.6,
                   fontSize: 16,
@@ -234,7 +254,7 @@ class _PrintReportButtonState extends State<_PrintReportButton> {
   @override
   Widget build(BuildContext context) {
     return GradientButton(
-      text: _isPrinting ? '生成中...' : '打印报告',
+      text: _isPrinting ? context.tr('生成中...') : context.tr('打印报告'),
       icon: Icons.print_rounded,
       isBusy: _isPrinting,
       onTap: _printReport,
@@ -263,7 +283,7 @@ class _PrintReportButtonState extends State<_PrintReportButton> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('打印失败: $error')));
+      ).showSnackBar(SnackBar(content: Text('Print failed: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -288,19 +308,19 @@ class _PrintReportButtonState extends State<_PrintReportButton> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('选择打印语言', style: AppText.titleSmall),
+                Text(context.tr('选择打印语言'), style: AppText.titleSmall),
                 const SizedBox(height: 14),
                 _PrintLanguageTile(
                   icon: CupertinoIcons.textformat,
-                  title: '打印中文版',
-                  subtitle: '使用中文标题、标签与页脚生成报告',
+                  title: context.tr('打印中文版'),
+                  subtitle: context.tr('使用中文标题、标签与页脚生成报告'),
                   onTap: () =>
                       Navigator.of(context).pop(ReportLanguage.chinese),
                 ),
                 const SizedBox(height: 10),
                 _PrintLanguageTile(
                   icon: CupertinoIcons.globe,
-                  title: '打印英文版',
+                  title: context.tr('打印英文版'),
                   subtitle: 'Use English labels and report headings',
                   onTap: () =>
                       Navigator.of(context).pop(ReportLanguage.english),
@@ -373,9 +393,10 @@ class _PrintLanguageTile extends StatelessWidget {
 }
 
 class _AnalysisHero extends StatelessWidget {
-  const _AnalysisHero({required this.report});
+  const _AnalysisHero({required this.report, required this.content});
 
   final AnalysisReport report;
+  final AnalysisContent content;
 
   @override
   Widget build(BuildContext context) {
@@ -417,10 +438,12 @@ class _AnalysisHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('AI 分析结果', style: AppText.titleSmall),
+                Text(context.tr('AI 分析结果'), style: AppText.titleSmall),
                 const SizedBox(height: 6),
                 Text(
-                  report.summary.isEmpty ? '暂无概要' : report.summary,
+                  content.summary.isEmpty
+                      ? context.tr('暂无概要')
+                      : content.summary,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppText.caption,

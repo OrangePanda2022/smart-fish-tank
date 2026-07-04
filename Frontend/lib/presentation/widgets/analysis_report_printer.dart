@@ -62,6 +62,9 @@ class AnalysisReportPrinter {
     final forecast = dashboard.prediction.forecast;
     final scoreColor = _scoreColor(report.statusScore);
     final labels = _ReportLabels.forLanguage(language);
+    final content = report.contentForLanguageCode(
+      language == ReportLanguage.english ? 'en' : 'zh',
+    );
 
     doc.addPage(
       pw.Page(
@@ -129,7 +132,7 @@ class AnalysisReportPrinter {
                 ],
               ),
               pw.SizedBox(height: 8),
-              _summaryBlock(report.summary, labels),
+              _summaryBlock(content.summary, labels),
               _sectionTitle(labels.visualAnalysis),
               pw.SizedBox(height: 7),
               _chartFrame(
@@ -201,7 +204,7 @@ class AnalysisReportPrinter {
                       minHeight: 116,
                       children: [
                         for (final item in _splitReasoning(
-                          report.reasoning,
+                          content.reasoning,
                           labels.noReasoning,
                         ).take(3))
                           _bullet(item),
@@ -215,11 +218,11 @@ class AnalysisReportPrinter {
                       color: _pdfColor(0xFF45C77A),
                       background: _pdfColor(0xFFF0FDF4),
                       minHeight: 116,
-                      children: report.actions.isEmpty
+                      children: content.actions.isEmpty
                           ? [_bullet(labels.noActions)]
                           : [
                               for (final entry
-                                  in report.actions
+                                  in content.actions
                                       .take(3)
                                       .toList()
                                       .asMap()

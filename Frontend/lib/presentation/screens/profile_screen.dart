@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../core/i18n/app_language_scope.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../domain/entities/aquarium_dashboard.dart';
@@ -35,8 +37,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ProfileHeaderCard(tank: widget.dashboard.tank),
             const SizedBox(height: 24),
             SectionHeader(
-              title: '鱼缸档案',
-              actionText: '基础信息',
+              title: context.tr('鱼缸档案'),
+              actionText: context.tr('基础信息'),
               showChevron: false,
               compact: true,
               onAction: () {},
@@ -45,8 +47,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TankProfileCard(tank: widget.dashboard.tank),
             const SizedBox(height: 24),
             SectionHeader(
-              title: '偏好设置',
-              actionText: '本地设置',
+              title: context.tr('偏好设置'),
+              actionText: context.tr('本地设置'),
               showChevron: false,
               compact: true,
               onAction: () {},
@@ -56,8 +58,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 SettingsToggleTile(
                   icon: CupertinoIcons.bell_fill,
-                  title: '通知提醒',
-                  subtitle: '接收设备和鱼缸状态通知',
+                  title: context.tr('通知提醒'),
+                  subtitle: context.tr('接收设备和鱼缸状态通知'),
                   value: _notificationEnabled,
                   onChanged: (value) {
                     setState(() => _notificationEnabled = value);
@@ -65,8 +67,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 SettingsToggleTile(
                   icon: CupertinoIcons.exclamationmark_triangle_fill,
-                  title: '水质异常提醒',
-                  subtitle: '水质指标异常时及时提醒',
+                  title: context.tr('水质异常提醒'),
+                  subtitle: context.tr('水质指标异常时及时提醒'),
                   value: _waterAlertEnabled,
                   onChanged: (value) {
                     setState(() => _waterAlertEnabled = value);
@@ -74,8 +76,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 SettingsToggleTile(
                   icon: CupertinoIcons.sparkles,
-                  title: '自动分析提醒',
-                  subtitle: '提醒你定期运行 AI 分析',
+                  title: context.tr('自动分析提醒'),
+                  subtitle: context.tr('提醒你定期运行 AI 分析'),
                   value: _analysisReminderEnabled,
                   onChanged: (value) {
                     setState(() => _analysisReminderEnabled = value);
@@ -83,8 +85,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 SettingsToggleTile(
                   icon: CupertinoIcons.moon_stars_fill,
-                  title: '夜间免打扰',
-                  subtitle: '夜间仅保留重要异常通知',
+                  title: context.tr('夜间免打扰'),
+                  subtitle: context.tr('夜间仅保留重要异常通知'),
                   value: _quietHoursEnabled,
                   onChanged: (value) {
                     setState(() => _quietHoursEnabled = value);
@@ -93,8 +95,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 24),
+            ProfileTileGroup(
+              children: [
+                ProfileMenuTile(
+                  icon: CupertinoIcons.globe,
+                  title: context.tr('语言'),
+                  subtitle: context.l10n.isEnglish
+                      ? context.tr('英文')
+                      : context.tr('中文'),
+                  color: AppColors.teal,
+                  onTap: _showLanguagePicker,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             SectionHeader(
-              title: '维护与支持',
+              title: context.tr('维护与支持'),
               actionText: 'AquaClaw',
               showChevron: false,
               compact: true,
@@ -105,38 +121,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 ProfileMenuTile(
                   icon: CupertinoIcons.info_circle_fill,
-                  title: '关于 AquaClaw',
-                  subtitle: '智能鱼缸状态管理工具',
+                  title: context.tr('关于 AquaClaw'),
+                  subtitle: context.tr('智能鱼缸状态管理工具'),
                   onTap: () => _showInfo(
-                    title: '关于 AquaClaw',
-                    message: 'AquaClaw 用于查看鱼缸状态、设备信息和水质数据。',
+                    title: context.tr('关于 AquaClaw'),
+                    message: context.tr('AquaClaw 用于查看鱼缸状态、设备信息和水质数据。'),
                   ),
                 ),
                 ProfileMenuTile(
                   icon: CupertinoIcons.doc_text_fill,
-                  title: '应用版本',
+                  title: context.tr('应用版本'),
                   subtitle: '1.0.0',
                   color: AppColors.teal,
-                  onTap: () => _showInfo(title: '应用版本', message: '当前版本：1.0.0'),
+                  onTap: () => _showInfo(
+                    title: context.tr('应用版本'),
+                    message: context.tr('当前版本：1.0.0'),
+                  ),
                 ),
                 ProfileMenuTile(
                   icon: CupertinoIcons.question_circle_fill,
-                  title: '使用帮助',
-                  subtitle: '查看常见操作说明',
+                  title: context.tr('使用帮助'),
+                  subtitle: context.tr('查看常见操作说明'),
                   color: AppColors.orange,
                   onTap: () => _showInfo(
-                    title: '使用帮助',
-                    message: '你可以在首页查看鱼缸状态，在数据中心查看传感器和历史数据。',
+                    title: context.tr('使用帮助'),
+                    message: context.tr('你可以在首页查看鱼缸状态，在数据中心查看传感器和历史数据。'),
                   ),
                 ),
                 ProfileMenuTile(
                   icon: CupertinoIcons.chat_bubble_2_fill,
-                  title: '问题反馈',
-                  subtitle: '记录使用中的问题和建议',
+                  title: context.tr('问题反馈'),
+                  subtitle: context.tr('记录使用中的问题和建议'),
                   color: AppColors.purple,
                   onTap: () => _showInfo(
-                    title: '问题反馈',
-                    message: '反馈入口已预留，后续可以接入表单或客服渠道。',
+                    title: context.tr('问题反馈'),
+                    message: context.tr('反馈入口已预留，后续可以接入表单或客服渠道。'),
                   ),
                 ),
               ],
@@ -160,9 +179,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('知道了'),
+              child: Text(context.tr('知道了')),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showLanguagePicker() {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) {
+        return CupertinoActionSheet(
+          title: Text(context.tr('语言')),
+          actions: [
+            CupertinoActionSheetAction(
+              onPressed: () {
+                AppLanguageScope.of(context).setLocale(const Locale('zh'));
+                Navigator.of(context).pop();
+              },
+              child: Text(context.tr('中文')),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () {
+                AppLanguageScope.of(context).setLocale(const Locale('en'));
+                Navigator.of(context).pop();
+              },
+              child: Text(context.tr('英文')),
+            ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(context.tr('取消')),
+          ),
         );
       },
     );
@@ -174,11 +224,11 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Text('我的', style: AppText.compactTitle),
-        SizedBox(width: 8),
-        Icon(CupertinoIcons.person_crop_circle, color: AppColors.primary),
+        Text(context.tr('我的'), style: AppText.compactTitle),
+        const SizedBox(width: 8),
+        const Icon(CupertinoIcons.person_crop_circle, color: AppColors.primary),
       ],
     );
   }

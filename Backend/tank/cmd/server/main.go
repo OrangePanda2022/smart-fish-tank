@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 	"tank/internal/config"
 	"tank/internal/controller"
+	"tank/internal/domain"
 	"tank/internal/infra/db"
 	"tank/internal/infra/mq"
 	"tank/internal/repo"
 	"tank/internal/service"
 	"tank/internal/stream"
+	"time"
 
 	"github.com/nats-io/nats.go"
 )
@@ -27,6 +28,7 @@ func main() {
 	// 数据库
 	db, _ := db.NewSQLite(cfg.Database.DSN)
 	tankRepo := repo.NewTankRepo(db)
+	ensureTestTank(tankRepo)
 
 	// 帧缓冲区
 	frameBuffer := stream.NewFrameBuffer(cfg.Stream.MaxRingSize, cfg.Stream.ViewerBufSize)
@@ -37,7 +39,7 @@ func main() {
 	// NATS连接（帧推送和消费共用）
 	var natsConn *mq.NATSConsumer
 	var nc *nats.Conn // 用于帧元数据发布的原生连接
-	natsConn, err = mq.NewNATSConsumer(cfg.NATSURL, tankRepo)
+	natsConn, err = mq.NewNATSConsumer(cfg.NATSURL, tankRepo, frameBuffer)
 	if err != nil {
 		log.Printf("Failed to create NATS consumer: %s\n", err)
 	} else {
@@ -68,4 +70,32 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("listen error: %s\n", err)
 	}
+}
+
+func ensureTestTank(tankRepo *repo.TankRepo) {
+	const (
+		testTankID = "019f1807-dbca-753d-afb8-6b2db160fa8d"
+		testUserID = "019ceb4d-95ef-75cd-8364-0144f0b984a7"
+	)
+
+	ctx := context.Background()
+	existing, err := tankRepo.GetTankByTankID(ctx, testTankID)
+	if err != nil {
+		log.Printf("Failed to check test tank: %s\n", err)
+		return
+	}
+	if existing != nil {
+		return
+	}
+
+	if err := tankRepo.Create(ctx, &domain.Tank{
+		TankID:   testTankID,
+		UserID:   testUserID,
+		TankName: "测试鱼缸",
+		TankSize: 120,
+	}); err != nil {
+		log.Printf("Failed to seed test tank: %s\n", err)
+		return
+	}
+	log.Printf("Seeded test tank %s\n", testTankID)
 }

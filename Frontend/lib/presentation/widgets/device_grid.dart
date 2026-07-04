@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../domain/entities/sensor_reading.dart';
@@ -16,15 +17,15 @@ class DeviceGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final devices = [
-      ...buildDeviceCatalog(sensor).take(7),
-      const DeviceControl(
-        '更多功能',
+      ...buildDeviceCatalog(context, sensor).take(7),
+      DeviceControl(
+        context.tr('更多功能'),
         '',
         CupertinoIcons.square_grid_2x2_fill,
         AppColors.primary,
       ),
-      const DeviceControl(
-        '添加设备',
+      DeviceControl(
+        context.tr('添加设备'),
         '',
         CupertinoIcons.plus_circle,
         AppColors.primary,
@@ -107,8 +108,7 @@ class DeviceTile extends StatelessWidget {
                       style: TextStyle(
                         color: device.color == AppColors.orange
                             ? AppColors.orange
-                            : device.status == '在线' ||
-                                  device.status.contains('已喂食')
+                            : device.id == 'camera' || device.id == 'feeder'
                             ? AppColors.success
                             : AppColors.primary,
                         fontSize: 14,

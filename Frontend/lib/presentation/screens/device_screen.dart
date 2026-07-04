@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../domain/entities/aquarium_dashboard.dart';
+import '../../domain/repositories/aquarium_repository.dart';
 import '../view_models/device_catalog.dart';
 import '../view_models/device_control.dart';
 import '../widgets/app_background.dart';
@@ -12,9 +14,14 @@ import '../widgets/section_header.dart';
 import 'device_detail_screen.dart';
 
 class DeviceScreen extends StatefulWidget {
-  const DeviceScreen({required this.dashboard, super.key});
+  const DeviceScreen({
+    required this.dashboard,
+    required this.repository,
+    super.key,
+  });
 
   final AquariumDashboard dashboard;
+  final AquariumRepository repository;
 
   @override
   State<DeviceScreen> createState() => _DeviceScreenState();
@@ -25,7 +32,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final devices = buildDeviceCatalog(widget.dashboard.latest);
+    final devices = buildDeviceCatalog(context, widget.dashboard.latest);
 
     return AppBackground(
       child: SafeArea(
@@ -38,8 +45,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
             DeviceSummaryCard(tank: widget.dashboard.tank, devices: devices),
             const SizedBox(height: 24),
             SectionHeader(
-              title: '全部设备',
-              actionText: '${devices.length} 个设备',
+              title: context.tr('全部设备'),
+              actionText: context.l10n.deviceCount(devices.length),
               showChevron: false,
               compact: true,
               onAction: () {},
@@ -77,7 +84,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
       MaterialPageRoute<void>(
         builder: (_) => DeviceDetailScreen(
           device: device,
+          tankId: widget.dashboard.tank.id,
           initialEnabled: _isEnabled(device),
+          repository: widget.repository,
         ),
       ),
     );
@@ -89,11 +98,14 @@ class _DeviceHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Text('设备管理', style: AppText.compactTitle),
-        SizedBox(width: 8),
-        Icon(CupertinoIcons.slider_horizontal_3, color: AppColors.primary),
+        Text(context.tr('设备管理'), style: AppText.compactTitle),
+        const SizedBox(width: 8),
+        const Icon(
+          CupertinoIcons.slider_horizontal_3,
+          color: AppColors.primary,
+        ),
       ],
     );
   }

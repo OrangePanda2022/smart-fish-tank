@@ -15,6 +15,7 @@ import (
 
 	"sensor/internal/config"
 	"sensor/internal/database"
+	"sensor/internal/domain"
 	"sensor/internal/handler"
 	"sensor/internal/mqtt"
 	"sensor/internal/nats"
@@ -70,6 +71,7 @@ func main() {
 		natsConn,
 		// deviceRepo,
 	)
+	ensureTestSensorData(sensorService)
 
 	// 初始化MQTT消费者
 	mqttConsumer := mqtt.NewConsumer(cfg.MQTT, sensorService)
@@ -143,4 +145,34 @@ func main() {
 	}
 
 	log.Println("服务器已正常退出")
+}
+
+func ensureTestSensorData(sensorService *service.SensorService) {
+	const (
+		testTankID   = "019f1807-dbca-753d-afb8-6b2db160fa8d"
+		testDeviceID = "test-sensor-019f1807"
+	)
+
+	if _, err := sensorService.GetLatestByTank(testTankID); err == nil {
+		return
+	}
+
+	if err := sensorService.ProcessSensorData(&domain.SensorData{
+		DeviceID:    testDeviceID,
+		TankID:      testTankID,
+		Temperature: 26.0,
+		PH:          7.0,
+		Oxygen:      6.8,
+		Ammonia:     0.01,
+		WaterLevel:  82,
+		TDS:         300,
+		Nitrate:     10,
+		Nitrite:     0.03,
+		Chloride:    3,
+		Timestamp:   time.Now(),
+	}); err != nil {
+		log.Printf("初始化测试鱼缸传感器数据失败: %v", err)
+		return
+	}
+	log.Printf("已初始化测试鱼缸 %s 的传感器数据", testTankID)
 }

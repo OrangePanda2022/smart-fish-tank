@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../domain/entities/tank_info.dart';
@@ -43,12 +44,12 @@ class ProfileHeaderCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${tank.size}L · ${tank.fishCount} 条鱼',
+                  context.l10n.tankLitersFish(tank.size, tank.fishCount),
                   style: AppText.caption,
                 ),
                 const SizedBox(height: 10),
-                const _StatusPill(
-                  text: '设备在线',
+                _StatusPill(
+                  text: context.tr('设备在线'),
                   color: AppColors.success,
                   icon: CupertinoIcons.wifi,
                 ),
@@ -74,26 +75,28 @@ class TankProfileCard extends StatelessWidget {
         children: [
           ProfileInfoRow(
             icon: CupertinoIcons.number,
-            label: '鱼缸 ID',
-            value: tank.id.isEmpty ? '未设置' : tank.id,
+            label: context.tr('鱼缸 ID'),
+            value: tank.id.isEmpty ? context.tr('未设置') : tank.id,
           ),
           const _Divider(),
           ProfileInfoRow(
             icon: CupertinoIcons.cube_box,
-            label: '鱼缸名称',
+            label: context.tr('鱼缸名称'),
             value: tank.name,
           ),
           const _Divider(),
           ProfileInfoRow(
             icon: CupertinoIcons.drop,
-            label: '鱼缸容量',
+            label: context.tr('鱼缸容量'),
             value: '${tank.size}L',
           ),
           const _Divider(),
           ProfileInfoRow(
             icon: CupertinoIcons.heart,
-            label: '鱼只数量',
-            value: '${tank.fishCount} 条',
+            label: context.tr('鱼只数量'),
+            value: context.l10n.isEnglish
+                ? '${tank.fishCount} fish'
+                : '${tank.fishCount} 条',
           ),
         ],
       ),

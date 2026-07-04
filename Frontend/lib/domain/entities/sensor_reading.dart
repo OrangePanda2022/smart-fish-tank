@@ -69,4 +69,36 @@ class SensorReading {
           DateTime.tryParse(asString(json['time'])) ?? fallback.timestamp,
     );
   }
+
+  Map<String, dynamic> toSensorPayload() {
+    return {
+      'temperature': temperature,
+      'ph': ph,
+      'oxygen': oxygen,
+      'ammonia': ammonia,
+      'waterLevel': waterLevel,
+      'tds': tds,
+      'nitrate': nitrate,
+      'nitrite': nitrite,
+      'chlorideIon': chloride,
+      'timestamp': _toShanghaiIso8601(timestamp),
+    };
+  }
+
+  String _toShanghaiIso8601(DateTime value) {
+    final shanghaiTime = value.toUtc().add(const Duration(hours: 8));
+    return '${_fourDigits(shanghaiTime.year)}-'
+        '${_twoDigits(shanghaiTime.month)}-'
+        '${_twoDigits(shanghaiTime.day)}T'
+        '${_twoDigits(shanghaiTime.hour)}:'
+        '${_twoDigits(shanghaiTime.minute)}:'
+        '${_twoDigits(shanghaiTime.second)}.'
+        '${_threeDigits(shanghaiTime.millisecond)}+08:00';
+  }
+
+  String _fourDigits(int value) => value.toString().padLeft(4, '0');
+
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+  String _threeDigits(int value) => value.toString().padLeft(3, '0');
 }

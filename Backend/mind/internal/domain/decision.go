@@ -5,11 +5,19 @@ type Action struct {
 	Action string `json:"action"`
 }
 
+type DecisionContent struct {
+	Summary   string   `json:"summary"`
+	Actions   []Action `json:"actions"`
+	Reasoning string   `json:"reasoning"`
+}
+
 type Decision struct {
-	StatusScore int      `json:"status_score"`
-	Summary     string   `json:"summary"`
-	Actions     []Action `json:"actions"`
-	Reasoning   string   `json:"reasoning"`
+	StatusScore int             `json:"status_score"`
+	Summary     string          `json:"summary,omitempty"`
+	Actions     []Action        `json:"actions,omitempty"`
+	Reasoning   string          `json:"reasoning,omitempty"`
+	Zh          DecisionContent `json:"zh"`
+	En          DecisionContent `json:"en"`
 }
 
 type AnalyseResponse struct {

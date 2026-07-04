@@ -39,12 +39,14 @@ func main() {
 	// （未采用副本的内存 mock 降级，保留 SHIT2 的 nil 守卫路线。）
 	var tankRepo repo.TankRepository
 	var sensorRepo repo.SensorRepository
+	var frameRepo repo.FrameRepository
 
 	tankNATS, tankErr := repo.NewTankNATSRepo(cfg.NATS.URL)
 	if tankErr != nil {
 		log.Printf("WARN: tank NATS repo init failed: %v (tank tool will error per-call)", tankErr)
 	} else {
 		tankRepo = tankNATS
+		frameRepo = tankNATS // *TankNATSRepo 同时满足 TankRepository 与 FrameRepository
 		defer tankNATS.Close()
 	}
 
@@ -66,7 +68,7 @@ func main() {
 		tools.NewTankTool(context.Background(), tankRepo),
 		tools.NewSensorTool(context.Background(), sensorRepo),
 		// tools.NewRAGTool(context.Background(), retriever),
-		tools.NewWeatherTool(context.Background()),
+		// tools.NewWeatherTool(context.Background()),
 		// tools.NewSearchTool(context.Background()),
 	}
 
@@ -76,7 +78,7 @@ func main() {
 		log.Fatalf("failed to create AquaAgent: %v", err)
 	}
 
-	analSvc := service.NewAnalyseService(aquaRAAgent)
+	analSvc := service.NewAnalyseService(aquaRAAgent, frameRepo)
 
 	// 加载 Koopman 预测模型；加载失败不致命，Predict 端点会返回 503
 	koopmanModel, err := koopman.LoadModel(cfg.Prediction.ModelPath)

@@ -5,23 +5,26 @@ import (
 	"encoding/json"
 	"tank/internal/dto/request"
 	"tank/internal/repo"
+	"tank/internal/stream"
 
 	"github.com/nats-io/nats.go"
 )
 
 type NATSConsumer struct {
-	NATSClient *nats.Conn
-	tankRepo   *repo.TankRepo
+	NATSClient  *nats.Conn
+	tankRepo    *repo.TankRepo
+	frameBuffer *stream.FrameBuffer
 }
 
-func NewNATSConsumer(URL string, tankRepo *repo.TankRepo) (*NATSConsumer, error) {
+func NewNATSConsumer(URL string, tankRepo *repo.TankRepo, frameBuffer *stream.FrameBuffer) (*NATSConsumer, error) {
 	nc, err := nats.Connect(URL)
 	if err != nil {
 		return nil, err
 	}
 	return &NATSConsumer{
-		NATSClient: nc,
-		tankRepo:   tankRepo,
+		NATSClient:  nc,
+		tankRepo:    tankRepo,
+		frameBuffer: frameBuffer,
 	}, nil
 }
 
@@ -61,6 +64,26 @@ func (c *NATSConsumer) Start(ctx context.Context) error {
 	})
 
 	if err != nil {
+		return err
+	}
+
+	// tank.frame: 返回最新一帧 JPEG（供 mind 服务做多模态分析）
+	// 契约: 成功回原始 JPEG 字节；无帧/坏请求回 {"error":"..."}。调用方按 SOI(0xFF 0xD8) 判定有效帧。
+	if _, err := c.NATSClient.QueueSubscribe("tank.frame", "tank-group", func(msg *nats.Msg) {
+		var req struct {
+			TankID string `json:"tank_id"`
+		}
+		if err := json.Unmarshal(msg.Data, &req); err != nil || req.TankID == "" {
+			msg.Respond([]byte(`{"error":"bad request"}`))
+			return
+		}
+		jpeg := c.frameBuffer.GetLatestFrame(req.TankID)
+		if len(jpeg) == 0 {
+			msg.Respond([]byte(`{"error":"no frame"}`))
+			return
+		}
+		msg.Respond(jpeg) // 原始 JPEG 字节，不是 JSON
+	}); err != nil {
 		return err
 	}
 

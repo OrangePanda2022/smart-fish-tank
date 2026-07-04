@@ -8,7 +8,7 @@ void main() {
     await tester.pumpWidget(const AquaClawApp());
     await tester.pump();
 
-    expect(find.text('我的鱼缸'), findsOneWidget);
+    expect(find.text('My Aquarium'), findsOneWidget);
     expect(find.text('客厅智能鱼缸'), findsNothing);
     expect(find.text('demo-tank'), findsNothing);
   });

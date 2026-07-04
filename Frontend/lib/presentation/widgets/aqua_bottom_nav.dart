@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_shadow.dart';
 
@@ -17,10 +18,10 @@ class AquaBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (CupertinoIcons.house_fill, '首页'),
-      (CupertinoIcons.chart_bar_fill, '数据'),
-      (CupertinoIcons.cube_box, '设备'),
-      (CupertinoIcons.person, '我的'),
+      (CupertinoIcons.house_fill, context.tr('首页')),
+      (CupertinoIcons.chart_bar_fill, context.tr('数据')),
+      (CupertinoIcons.cube_box, context.tr('设备')),
+      (CupertinoIcons.person, context.tr('我的')),
     ];
 
     return ClipRRect(

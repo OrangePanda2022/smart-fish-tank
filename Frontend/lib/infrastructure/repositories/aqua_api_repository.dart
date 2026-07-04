@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/analysis_report.dart';
@@ -15,7 +15,7 @@ class AquaApiRepository implements AquariumRepository {
   AquaApiRepository({
     this.baseUrl = const String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'http://localhost:8080',
+      defaultValue: 'https://api-aqua.hubu.wiki',
     ),
   });
 
@@ -73,6 +73,28 @@ class AquaApiRepository implements AquariumRepository {
     }
   }
 
+  @override
+  Future<SensorReading> submitSensorReading(
+    String tankId,
+    SensorReading reading,
+  ) async {
+    if (tankId.isEmpty) {
+      throw StateError('未连接鱼缸，无法录入传感器数据。');
+    }
+
+    final data = await _postJson(
+      '/api/v1/tanks/$tankId/sensors',
+      reading.toSensorPayload(),
+    );
+    final raw = data['data'];
+    if (raw is Map<String, dynamic>) {
+      final created = SensorReading.fromJson(raw);
+      _historyCache.remove(tankId);
+      return created;
+    }
+    throw const FormatException('Expected created sensor data');
+  }
+
   List<SensorReading> _cachedHistoryOrEmpty(String tankId) {
     final cached = _historyCache[tankId];
     if (cached != null && cached.isNotEmpty) return cached;
@@ -82,7 +104,7 @@ class AquaApiRepository implements AquariumRepository {
   @override
   Future<AnalysisReport> runAnalysis(String tankId) async {
     if (tankId.isEmpty) {
-      return AnalysisReport.fallback(tankId: tankId, summary: '');
+      throw StateError('未连接鱼缸，无法运行 AI 分析。');
     }
     final data = await _getJson(
       '/api/v1/analyse/$tankId',
@@ -93,6 +115,12 @@ class AquaApiRepository implements AquariumRepository {
     await _cacheAnalysisSummary(tankId, _analysisSummaryFromReport(report));
     _cacheDashboardScore(tankId, report.statusScore);
     return report;
+  }
+
+  @override
+  Uri videoStreamUri(String tankId) {
+    if (tankId.isEmpty) return Uri();
+    return Uri.parse('$baseUrl/api/v1/tank/$tankId/stream');
   }
 
   void _cacheDashboard(AquariumDashboard dashboard) {
@@ -160,24 +188,41 @@ class AquaApiRepository implements AquariumRepository {
     Duration timeout = const Duration(seconds: 4),
   }) async {
     final uri = Uri.parse('$baseUrl$path');
-    final client = HttpClient()..connectionTimeout = timeout;
-    try {
-      final request = await client.getUrl(uri).timeout(timeout);
-      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      final response = await request.close().timeout(timeout);
-      final text = await response
-          .transform(utf8.decoder)
-          .join()
-          .timeout(timeout);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException('HTTP ${response.statusCode}', uri: uri);
-      }
-      final decoded = jsonDecode(text);
-      if (decoded is Map<String, dynamic>) return decoded;
-      throw const FormatException('Expected JSON object');
-    } finally {
-      client.close(force: true);
+    final response = await http
+        .get(uri, headers: const {'Accept': 'application/json'})
+        .timeout(timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('HTTP ${response.statusCode}: $uri');
     }
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (decoded is Map<String, dynamic>) return decoded;
+    throw const FormatException('Expected JSON object');
+  }
+
+  Future<Map<String, dynamic>> _postJson(
+    String path,
+    Map<String, dynamic> body, {
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    final uri = Uri.parse('$baseUrl$path');
+    final response = await http
+        .post(
+          uri,
+          headers: const {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'HTTP ${response.statusCode}: ${utf8.decode(response.bodyBytes)}',
+      );
+    }
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (decoded is Map<String, dynamic>) return decoded;
+    throw const FormatException('Expected JSON object');
   }
 
   Future<int?> _loadCachedAnalysisScore(String tankId) async {
@@ -207,7 +252,8 @@ class AquaApiRepository implements AquariumRepository {
   }
 
   String _analysisSummaryFromReport(AnalysisReport report) {
-    if (report.summary.isNotEmpty) return report.summary;
-    return report.reasoning;
+    final content = report.zh;
+    if (content.summary.isNotEmpty) return content.summary;
+    return content.reasoning;
   }
 }

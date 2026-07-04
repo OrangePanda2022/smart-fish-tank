@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../domain/entities/sensor_reading.dart';
@@ -16,14 +17,14 @@ class SensorMetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final metrics = [
       SensorMetric(
-        'pH值',
+        context.tr('pH值'),
         sensor.ph.toStringAsFixed(2),
         '',
         CupertinoIcons.drop,
         AppColors.teal,
       ),
       SensorMetric(
-        '温度',
+        context.tr('温度'),
         sensor.temperature.toStringAsFixed(1),
         '°C',
         CupertinoIcons.thermometer,
@@ -37,7 +38,7 @@ class SensorMetricGrid extends StatelessWidget {
         AppColors.mint,
       ),
       SensorMetric(
-        '溶氧',
+        context.tr('溶氧'),
         sensor.oxygen.toStringAsFixed(1),
         'mg/L',
         CupertinoIcons.drop_fill,
@@ -51,28 +52,28 @@ class SensorMetricGrid extends StatelessWidget {
         AppColors.green,
       ),
       SensorMetric(
-        '氨氮',
+        context.tr('氨氮'),
         sensor.ammonia.toStringAsFixed(2),
         'mg/L',
         CupertinoIcons.lab_flask,
         AppColors.purple,
       ),
       SensorMetric(
-        '亚硝酸盐',
+        context.tr('亚硝酸盐'),
         sensor.nitrite.toStringAsFixed(2),
         'mg/L',
         CupertinoIcons.drop_triangle,
         AppColors.violet,
       ),
       SensorMetric(
-        '硝酸盐',
+        context.tr('硝酸盐'),
         sensor.nitrate.toStringAsFixed(1),
         'mg/L',
         CupertinoIcons.square_stack,
         AppColors.mint,
       ),
       SensorMetric(
-        '氯离子',
+        context.tr('氯离子'),
         sensor.chloride.toStringAsFixed(1),
         'mg/L',
         CupertinoIcons.circle_grid_3x3,
@@ -148,12 +149,12 @@ class SensorMetricTile extends StatelessWidget {
               ),
             ),
           ),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircleAvatar(radius: 4, backgroundColor: AppColors.success),
-              SizedBox(width: 5),
-              Text('正常', style: AppText.okText),
+              const CircleAvatar(radius: 4, backgroundColor: AppColors.success),
+              const SizedBox(width: 5),
+              Text(context.tr('正常'), style: AppText.okText),
             ],
           ),
         ],

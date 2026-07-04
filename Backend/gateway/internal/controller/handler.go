@@ -102,10 +102,13 @@ func NewRouter(routes map[string]string, logger *zap.Logger) *Router {
 }
 
 func (r *Router) Match(path string) (string, bool) {
+	bestPrefix := ""
+	bestService := ""
 	for prefix, serviceName := range r.routes {
-		if strings.HasPrefix(path, prefix) {
-			return serviceName, true
+		if strings.HasPrefix(path, prefix) && len(prefix) > len(bestPrefix) {
+			bestPrefix = prefix
+			bestService = serviceName
 		}
 	}
-	return "", false
+	return bestService, bestPrefix != ""
 }

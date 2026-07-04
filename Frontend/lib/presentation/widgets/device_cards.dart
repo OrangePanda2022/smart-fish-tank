@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../domain/entities/tank_info.dart';
@@ -51,7 +52,7 @@ class DeviceSummaryCard extends StatelessWidget {
                     Text(tank.name, style: AppText.cardTitle),
                     const SizedBox(height: 4),
                     Text(
-                      '${tank.size}L · ${tank.fishCount} 条鱼 · 智能托管',
+                      context.l10n.tankManaged(tank.size, tank.fishCount),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.caption,
@@ -67,21 +68,21 @@ class DeviceSummaryCard extends StatelessWidget {
               Expanded(
                 child: _SummaryStat(
                   value: '$onlineCount',
-                  label: '在线设备',
+                  label: context.tr('在线设备'),
                   color: AppColors.success,
                 ),
               ),
               Expanded(
                 child: _SummaryStat(
                   value: '$enabledCount',
-                  label: '运行中',
+                  label: context.tr('运行中'),
                   color: AppColors.primary,
                 ),
               ),
               Expanded(
                 child: _SummaryStat(
                   value: '$offlineCount',
-                  label: '需处理',
+                  label: context.tr('需处理'),
                   color: offlineCount > 0 ? AppColors.orange : AppColors.muted,
                 ),
               ),
@@ -212,7 +213,9 @@ class DeviceListTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       _StatusPill(
-                        text: device.isOnline ? (active ? '运行中' : '待机') : '离线',
+                        text: device.isOnline
+                            ? (active ? context.tr('运行中') : context.tr('待机'))
+                            : context.tr('离线'),
                         color: device.isOnline
                             ? (active ? AppColors.success : AppColors.primary)
                             : AppColors.orange,
@@ -287,7 +290,9 @@ class DeviceDetailHeader extends StatelessWidget {
                     Text(device.title, style: AppText.titleSmall),
                     const SizedBox(height: 8),
                     _StatusPill(
-                      text: device.isOnline ? (active ? '运行中' : '待机') : '离线',
+                      text: device.isOnline
+                          ? (active ? context.tr('运行中') : context.tr('待机'))
+                          : context.tr('离线'),
                       color: device.isOnline
                           ? (active ? AppColors.success : AppColors.primary)
                           : AppColors.orange,
@@ -321,7 +326,7 @@ class DeviceControlPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('控制与状态', style: AppText.cardTitle),
+          Text(context.tr('控制与状态'), style: AppText.cardTitle),
           const SizedBox(height: 16),
           Row(
             children: device.metrics

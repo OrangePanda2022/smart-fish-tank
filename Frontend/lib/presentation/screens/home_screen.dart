@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/analysis_report.dart';
 import '../../domain/entities/aquarium_dashboard.dart';
@@ -47,7 +48,11 @@ class HomeScreen extends StatelessWidget {
                 onAnalysisComplete: onRefresh,
               ),
               const SizedBox(height: 22),
-              SectionHeader(title: '设备控制', actionText: '全部设备', onAction: () {}),
+              SectionHeader(
+                title: context.tr('设备控制'),
+                actionText: context.tr('全部设备'),
+                onAction: () {},
+              ),
               const SizedBox(height: 14),
               DeviceGrid(sensor: dashboard.latest),
             ],

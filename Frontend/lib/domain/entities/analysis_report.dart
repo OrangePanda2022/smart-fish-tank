@@ -5,17 +5,23 @@ class AnalysisReport {
     required this.reportId,
     required this.tankId,
     required this.statusScore,
-    required this.summary,
-    required this.actions,
-    required this.reasoning,
+    required this.zh,
+    required this.en,
   });
 
   final String reportId;
   final String tankId;
   final int statusScore;
-  final String summary;
-  final List<AnalysisAction> actions;
-  final String reasoning;
+  final AnalysisContent zh;
+  final AnalysisContent en;
+
+  String get summary => zh.summary;
+  List<AnalysisAction> get actions => zh.actions;
+  String get reasoning => zh.reasoning;
+
+  AnalysisContent contentForLanguageCode(String languageCode) {
+    return languageCode == 'en' ? en : zh;
+  }
 
   factory AnalysisReport.fromJson(Map<String, dynamic> json) {
     final data = json['data'] is Map<String, dynamic>
@@ -24,34 +30,46 @@ class AnalysisReport {
     final decision = data['decision'] is Map<String, dynamic>
         ? data['decision'] as Map<String, dynamic>
         : const <String, dynamic>{};
-    final rawActions = decision['actions'];
+    final legacy = AnalysisContent.fromJson(decision);
+    final zh = decision['zh'] is Map<String, dynamic>
+        ? AnalysisContent.fromJson(decision['zh'] as Map<String, dynamic>)
+        : legacy;
+    final en = decision['en'] is Map<String, dynamic>
+        ? AnalysisContent.fromJson(decision['en'] as Map<String, dynamic>)
+        : zh;
 
     return AnalysisReport(
       reportId: asString(data['report_id']),
       tankId: asString(data['tank_id']),
       statusScore: asInt(decision['status_score']),
-      summary: asString(decision['summary']),
+      zh: zh,
+      en: en,
+    );
+  }
+}
+
+class AnalysisContent {
+  const AnalysisContent({
+    required this.summary,
+    required this.actions,
+    required this.reasoning,
+  });
+
+  final String summary;
+  final List<AnalysisAction> actions;
+  final String reasoning;
+
+  factory AnalysisContent.fromJson(Map<String, dynamic> json) {
+    final rawActions = json['actions'];
+    return AnalysisContent(
+      summary: asString(json['summary']),
       actions: rawActions is List
           ? rawActions
                 .whereType<Map<String, dynamic>>()
                 .map(AnalysisAction.fromJson)
                 .toList()
           : const [],
-      reasoning: asString(decision['reasoning']),
-    );
-  }
-
-  factory AnalysisReport.fallback({required String tankId, String? summary}) {
-    return AnalysisReport(
-      reportId: 'demo-report',
-      tankId: tankId,
-      statusScore: 95,
-      summary: summary ?? '水质状况良好，各项指标均在正常范围内。',
-      actions: const [
-        AnalysisAction(device: 'heater', action: '维持当前温度设置'),
-        AnalysisAction(device: 'filter', action: '保持当前过滤频率'),
-      ],
-      reasoning: summary ?? '当前传感器指标处于安全范围，建议继续观察水温、pH 和溶解氧变化。',
+      reasoning: asString(json['reasoning']),
     );
   }
 }
